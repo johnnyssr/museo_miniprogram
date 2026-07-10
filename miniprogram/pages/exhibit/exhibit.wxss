@@ -1,0 +1,79 @@
+/**exhibit.wxss**/
+.page {
+  height: 100vh;
+  background: #f5f3ee;
+}
+.empty {
+  display: flex;
+  height: 100vh;
+  align-items: center;
+  justify-content: center;
+  color: #8a7d6a;
+  font-size: 30rpx;
+}
+.cover {
+  width: 100%;
+  height: 420rpx;
+}
+.header {
+  padding: 30rpx;
+  background: #fff;
+}
+.name {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #3a2f22;
+}
+.dynasty {
+  margin-left: 16rpx;
+  font-size: 26rpx;
+  color: #8a6d3b;
+}
+.section {
+  margin: 20rpx;
+  padding: 30rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+.section-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #3a2f22;
+  margin-bottom: 16rpx;
+}
+.text {
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: #5a5145;
+}
+.block {
+  margin: 20rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+.block-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 30rpx;
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #3a2f22;
+}
+.arrow {
+  font-size: 26rpx;
+  color: #8a6d3b;
+  font-weight: normal;
+}
+.block-body {
+  padding: 0 30rpx 30rpx;
+}
+.play-btn {
+  background: #8a6d3b;
+  color: #fff;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+}
+.video {
+  width: 100%;
+}
