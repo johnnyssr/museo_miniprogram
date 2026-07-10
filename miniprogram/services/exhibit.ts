@@ -45,3 +45,8 @@ const EXHIBITS: Exhibit[] = [
 export function getExhibitById(id: string): Exhibit | undefined {
   return EXHIBITS.find(e => e.id === id)
 }
+
+/** 返回全部展品（用于列表页浏览） */
+export function getAllExhibits(): Exhibit[] {
+  return EXHIBITS
+}
