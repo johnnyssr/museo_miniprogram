@@ -37,3 +37,11 @@ page {
   padding: 0 60rpx;
   text-align: center;
 }
+.browse-link {
+  margin-top: 32rpx;
+  font-size: 28rpx;
+  color: #8a6d3b;
+  padding: 12rpx 24rpx;
+  border: 1rpx solid #d8c9ad;
+  border-radius: 40rpx;
+}

@@ -20,5 +20,10 @@ Component({
         },
       })
     },
+
+    // 点击「浏览全部展品」
+    onBrowseAll() {
+      wx.navigateTo({ url: '/pages/list/list' })
+    },
   },
 })
