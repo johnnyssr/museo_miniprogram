@@ -7,8 +7,16 @@ Component({
     list: [] as Exhibit[],
   },
   methods: {
-    onLoad() {
-      this.setData({ list: getAllExhibits() })
+    async onLoad() {
+      wx.showLoading({ title: '加载中' })
+      try {
+        const list = await getAllExhibits()
+        this.setData({ list })
+      } catch (e) {
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+      } finally {
+        wx.hideLoading()
+      }
     },
 
     // 点击卡片进入详情

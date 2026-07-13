@@ -21,14 +21,21 @@ Component({
     },
   },
   methods: {
-    onLoad(query: Record<string, string>) {
+    async onLoad(query: Record<string, string>) {
       const id = (query.id || '').trim()
-      const exhibit = getExhibitById(id)
-      if (!exhibit) {
-        this.setData({ notFound: true })
-        return
+      wx.showLoading({ title: '加载中' })
+      try {
+        const exhibit = await getExhibitById(id)
+        if (!exhibit) {
+          this.setData({ notFound: true })
+          return
+        }
+        this.setData({ exhibit })
+      } catch (e) {
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+      } finally {
+        wx.hideLoading()
       }
-      this.setData({ exhibit })
     },
 
     // 展开/收起语音区块
