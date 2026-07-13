@@ -1,0 +1,9 @@
+{
+  "name": "getExhibits",
+  "version": "1.0.0",
+  "description": "查询展品：传 exhibitId 返回单个，不传返回全部",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
