@@ -2,7 +2,7 @@
 
 一个面向博物馆参观者的微信小程序：观众通过**扫描展品二维码**或**浏览展品列表**，即可查看该展品的**文字介绍、语音讲解和视频介绍**。
 
-> 当前为 Demo 阶段，展品数据为本地 mock 数据，媒体资源使用公开测试地址。
+> 当前为 Demo 阶段。展品数据已迁至**微信云开发**云数据库，小程序通过云函数读取；媒体资源暂用公开测试地址。
 
 ## 功能
 
@@ -25,23 +25,54 @@
 ```
 miniprogram/
 ├── models/exhibit.ts      # Exhibit 类型定义
-├── services/exhibit.ts    # 本地 mock 数据 + 查询函数（getExhibitById / getAllExhibits）
+├── services/exhibit.ts    # 数据访问层：调用云函数读取展品（getExhibitById / getAllExhibits，异步）
 ├── pages/
 │   ├── index/             # 首页
 │   ├── list/              # 展品列表页
 │   └── exhibit/           # 展品详情页
 └── app.json               # 页面注册与全局配置
-docs/superpowers/          # 设计文档与实现计划
+cloudfunctions/
+└── getExhibits/           # 云函数：查询展品（传 exhibitId 查单个，不传查全部）
+docs/superpowers/          # 设计文档、实现计划、数据录入清单
 test/                      # 展品测试二维码（exhibit-001/002/003）
 ```
 
-数据访问统一收敛在 `services/exhibit.ts`：页面不直接访问数据数组，只调用 `getExhibitById(id)` 和 `getAllExhibits()`。将来接入真实后端时，只需改动该 service 层，页面代码基本不用调整。
+数据访问统一收敛在 `services/exhibit.ts`：页面不直接访问数据库，只调用 `getExhibitById(id)` 和 `getAllExhibits()`（内部走云函数 `getExhibits`）。数据来源变化只需改动该 service 层，页面代码不受影响。
+
+## 首次运行准备（重要）
+
+从仓库拉取代码后，**必须完成以下两项**，否则运行会报错。
+
+### 1. 启用 TypeScript 编译
+
+本项目页面逻辑用 TypeScript（`.ts`）编写，依赖开发者工具的内置 TS 编译插件。若拉取后运行报类似
+`Component "pages/index/index" does not have a method "onScan"` 的错误，
+说明 `.ts` 未被编译成运行时代码。请确认：
+
+- 使用**较新版本**的微信开发者工具（旧版可能不支持内置 TS 插件）。
+- 通过「导入项目」指向**仓库根目录**，让 `project.config.json` 被正确读取（其中已启用 `useCompilerPlugins: ["typescript"]`）。
+- 导入后点一次「编译」，确认无上述报错。
+
+### 2. 配置微信云开发
+
+展品数据存于云数据库，需先完成云开发配置：
+
+1. **开通云开发**：开发者工具点「云开发」，用小程序账号开通，创建一个云环境，记下**环境 ID**。
+2. **填写环境 ID**：把 `miniprogram/app.ts` 中 `wx.cloud.init({ env: '...' })` 的 env 改成你自己的环境 ID。
+   （仓库当前填的是原作者的环境 ID，其他开发者需替换为自己的。）
+3. **部署云函数**：右键 `cloudfunctions/getExhibits` →「上传并部署：云端安装依赖」。
+   - 若右键无此菜单：重启开发者工具（使其识别 `cloudfunctionRoot`），并确认 `cloudfunctions` 根目录已关联你的云环境。
+4. **建集合并录入数据**：在云开发控制台「数据库」新建集合 `exhibits`，权限设为
+   **「所有用户可读，仅创建者可读写」**，按 `docs/superpowers/exhibits-seed-data.md` 录入 3 条初始记录。
+
+完成后编译运行，列表页应能从云端加载出展品。
 
 ## 本地运行
 
-1. 用[微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)导入本项目（`miniprogramRoot` 为 `miniprogram/`）。
+1. 用[微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)导入本项目（指向仓库根目录，`miniprogramRoot` 为 `miniprogram/`）。
 2. 填入你自己的小程序 AppID。
-3. 编译运行。
+3. 完成上面「首次运行准备」的两项。
+4. 编译运行。
 
 ### 在模拟器中测试扫码
 
@@ -64,13 +95,13 @@ test/                      # 展品测试二维码（exhibit-001/002/003）
 - 微信小程序（TypeScript）
 - glass-easel 组件框架 / Skyline 渲染
 - 页面统一使用 `Component()` 构造器
+- 微信云开发（云数据库 + 云函数）
 
 ## 后续演进方向
 
-Demo 之外，要成为可运营的产品还需：
-
-- **后端与数据库**：展品数据的增删改查接口、媒体文件存储。
-- **内容管理平台**：供运营人员录入、编辑、维护展品内容与二维码。
+- **内容管理平台**：供运营人员通过界面录入、编辑、维护展品内容（数据录入的正式归宿）。
+- **媒体上云**：把图片/音视频上传到云存储，字段改用 `cloud://` 文件 ID（数据模型已兼容，无需改结构），彻底摆脱外链与域名白名单。
+- **小程序码**：按展品批量生成小程序码，实现「微信直接扫、小程序内扫」都能跳转对应展品。
 - **可选功能**：多语言、检索、分类筛选、收藏、馆内地图导览等。
 
 > 注：内容准备（文字撰写、配音、视频、文物摄影、二维码印刷布展）由馆方负责，不属于软件开发范畴，工作量随展品数量增长。

@@ -12,7 +12,7 @@
 
 **关于 `Exhibit.id` 与 DB `exhibitId`：** 页面和 wxml 现在全用 `Exhibit.id`（如 `item.id`、`?id=`）。为保持页面零改动，DB 里字段叫 `exhibitId`，**service 层读到数据后映射成 `id`** 返回给页面。这样 wxml、样式、详情页读取 `query.id` 全部不用动。
 
-**关于 envId：** `app.ts` 需要填云开发环境 ID。计划中用占位符 `<YOUR_ENV_ID>`，实现时替换为用户提供的真实 envId（用户在开发者工具开通云开发后获取）。
+**关于 envId：** `app.ts` 需要填云开发环境 ID，本项目为 `cloud1-d6gnwyekz0f64654f`。
 
 ---
 
