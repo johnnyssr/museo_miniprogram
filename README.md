@@ -2,7 +2,7 @@
 
 一个面向博物馆参观者的微信小程序：观众通过**扫描展品二维码**或**浏览展品列表**，即可查看该展品的**文字介绍、语音讲解和视频介绍**。
 
-> 当前为 Demo 阶段。展品数据已迁至**微信云开发**云数据库，小程序通过云函数读取；媒体资源暂用公开测试地址。
+> 当前为 Demo 阶段。展品数据已迁至**微信云开发**云数据库，小程序通过云函数读取；并提供了 Web 管理后台（`admin/`）用于维护展品内容与上传媒体。
 
 ## 功能
 
@@ -32,7 +32,9 @@ miniprogram/
 │   └── exhibit/           # 展品详情页
 └── app.json               # 页面注册与全局配置
 cloudfunctions/
-└── getExhibits/           # 云函数：查询展品（传 exhibitId 查单个，不传查全部）
+├── getExhibits/           # 云函数：查询展品（传 exhibitId 查单个，不传查全部）
+└── manageExhibit/         # 云函数：展品写操作（create/update/delete），带管理员鉴权
+admin/                     # 展品管理 Web 后台（Vue3 + Vite + Element Plus，独立静态站点）
 docs/superpowers/          # 设计文档、实现计划、数据录入清单
 test/                      # 展品测试二维码（exhibit-001/002/003）
 ```
@@ -90,17 +92,64 @@ test/                      # 展品测试二维码（exhibit-001/002/003）
 
 > **网络媒体注意**：小程序真机加载网络图片/音频/视频，需在小程序后台「开发管理 → 开发设置 → 服务器域名」的 `downloadFile 合法域名` 中配置媒体所在域名。开发者工具中可临时勾选「不校验合法域名」测试。
 
+## 展品管理后台（Web）
+
+`admin/` 是一个**独立的网页后台**（Vue3 + Vite + Element Plus），供运营人员在电脑浏览器里维护展品：新增、编辑、删除，以及上传图片/音视频到云存储（也支持直接填外部链接）。它通过 `@cloudbase/js-sdk` 直连**同一个云环境**，复用 `exhibits` 集合；小程序端无需任何改动，后台改完数据即时生效。
+
+设计详见 [docs/superpowers/specs/2026-08-18-admin-web-design.md](docs/superpowers/specs/2026-08-18-admin-web-design.md)。
+
+### 架构
+
+- **读**：复用小程序同款云函数 `getExhibits`（列表 / 单查）。
+- **写**：全部经云函数 `manageExhibit`，函数内校验管理员白名单后才操作数据库；浏览器端不直接写库。
+- **媒体**：上传直传云存储得到 `cloud://` fileID 存入字段；预览时用 `getTempFileURL` 换临时链接。小程序天然能渲染 `cloud://`。
+
+### 云环境配置（首次，控制台操作）
+
+1. **部署 `manageExhibit`**：开发者工具右键 `cloudfunctions/manageExhibit` →「上传并部署：云端安装依赖」。
+2. **配管理员白名单**：在云开发控制台该云函数的「环境变量」里设 `ADMIN_IDS`，值为管理员身份标识（多个用英文逗号分隔）。首次可先随意填一个，登录后台后从 `manageExhibit` 日志里看到实际调用者标识，再回填正确值。
+3. **开通账号密码登录**：在 CloudBase 控制台「环境 → 登录授权/用户管理」开通用户名密码登录，创建管理员账号。
+4. **配置 Web 访问**：在「环境 → 访问方式 → Web」创建凭证（accessKey / publishable key），并把后台部署域名（或本地 `http://localhost:5173`）加入允许来源。
+5. **集合权限**：`exhibits` 设为「所有用户可读、仅管理端可写」（写只走云函数）。云存储安全规则限制写权限。
+
+### 本地运行
+
+```bash
+cd admin
+npm install
+# 首次：把上一步拿到的 accessKey/region 写入 admin/.env.local（见下），或直接改 src/config.ts 默认值
+npm run dev        # 打开 http://localhost:5173
+```
+
+`admin/.env.local`（不入库）可覆盖云环境配置：
+
+```
+VITE_CB_ENV=cloud1-d6gnwyekz0f64654f
+VITE_CB_REGION=ap-shanghai
+VITE_CB_ACCESS_KEY=你的凭证
+```
+
+### 构建与部署
+
+```bash
+cd admin
+npm run build      # 产物在 admin/dist/
+```
+
+把 `admin/dist/` 上传到 **CloudBase 静态网站托管**（控制台「静态网站托管」或 CLI），得到访问地址即为后台入口。
+
 ## 技术栈
 
 - 微信小程序（TypeScript）
 - glass-easel 组件框架 / Skyline 渲染
 - 页面统一使用 `Component()` 构造器
-- 微信云开发（云数据库 + 云函数）
+- 微信云开发（云数据库 + 云函数 + 云存储）
+- 管理后台：Vue 3 + Vite + Element Plus + `@cloudbase/js-sdk`
 
 ## 后续演进方向
 
-- **内容管理平台**：供运营人员通过界面录入、编辑、维护展品内容（数据录入的正式归宿）。
-- **媒体上云**：把图片/音视频上传到云存储，字段改用 `cloud://` 文件 ID（数据模型已兼容，无需改结构），彻底摆脱外链与域名白名单。
+- **内容管理平台**：✅ 已提供 Web 后台（`admin/`），支持展品增删改与媒体上传。
+- **媒体上云**：✅ 后台已支持把图片/音视频上传到云存储（`cloud://` 文件 ID）；存量外链可逐步替换。
 - **小程序码**：按展品批量生成小程序码，实现「微信直接扫、小程序内扫」都能跳转对应展品。
 - **可选功能**：多语言、检索、分类筛选、收藏、馆内地图导览等。
 

@@ -1,0 +1,9 @@
+{
+  "name": "manageExhibit",
+  "version": "1.0.0",
+  "description": "展品写操作（增/改/删），带管理员鉴权",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
