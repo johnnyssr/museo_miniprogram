@@ -115,7 +115,14 @@ test/                      # 展品测试二维码（exhibit-001/002/003）
   - **体验版（trial）/ 开发版（develop）**：发布前自测用，**仅体验成员/开发者**能扫进。
 - **约束**：`scene` 上限 32 字符，且仅支持数字/字母及 `!#$&'()*+,/:;=?@-._~`；`exhibitId` 需落在此范围（如 `specimen-001` 可用）。
 
-> 部署此功能需：①在开发者工具部署云函数 `getExhibitQRCode`（云端安装依赖）；②小程序展品页已含 `scene` 解析（本仓库已改）；③正式对外前发布小程序正式版，并把弹窗版本切到「正式版」。
+> 部署此功能需：
+> 1. 在开发者工具部署云函数 `getExhibitQRCode`；
+> 2. 在该云函数「环境变量」配置 `WX_APPSECRET`（小程序 AppSecret，见微信公众平台「开发管理 → 开发设置」）；`WX_APPID` 可选（缺省用代码内默认 AppID）；
+> 3. 确认微信「开发设置」中 **access_token 的 IP 白名单未启用**（云函数出口 IP 不固定，启用会导致换 token 失败）；
+> 4. 小程序展品页已含 `scene` 解析（本仓库已改）；
+> 5. 正式对外前发布小程序正式版，并把弹窗版本切到「正式版」。
+>
+> 说明：后台是网页（web_client）调用云函数，微信「免鉴权云调用」拿不到 access_token（会报 `INVALID_WX_ACCESS_TOKEN`），故云函数用 AppID+AppSecret 自行换取 `access_token` 再调 `getwxacodeunlimit`。AppSecret 只存云函数环境变量，不进前端代码。
 
 ### 云环境配置（首次，控制台操作）
 

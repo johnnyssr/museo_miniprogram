@@ -137,7 +137,7 @@
 
 **实现**：
 
-- 新增云函数 `cloudfunctions/getExhibitQRCode`：`cloud.openapi.wxacode.getUnlimited({ scene: exhibitId, page: 'pages/exhibit/exhibit', envVersion, checkPath: false, width: 430 })`，返回图片 base64（`{ ok, contentType, base64 }`）。
+- 新增云函数 `cloudfunctions/getExhibitQRCode`：用小程序 AppID + AppSecret 换取 `access_token`（`/cgi-bin/stable_token`），再调 HTTP `getwxacodeunlimit`（`scene=exhibitId`、`page='pages/exhibit/exhibit'`、`env_version`、`check_path:false`、`width:430`），返回图片 base64（`{ ok, contentType, base64 }`）。
 - 小程序展品页 `onLoad` 兼容入口：`query.id`（列表/文本扫码）与 `query.scene`（小程序码）。**这是对小程序的唯一改动。**
 - 后台 `cloudbase.ts` 加 `fetchExhibitQRCode(exhibitId, envVersion)` → 返回 data URL；列表页每行「二维码」按钮打开弹窗预览 + 下载 PNG，含 `release/trial/develop` 版本选择。
 
@@ -145,4 +145,4 @@
 
 - `scene` 上限 32 字符，仅支持数字/字母及 `!#$&'()*+,/:;=?@-._~`。
 - `envVersion=release` 需小程序**已发布正式版**，游客扫码才生效；发布前用 `trial/develop` 自测（仅体验成员/开发者可扫）。
-- 云函数经 web 端 `callFunction` 调用；`wxacode` 用小程序 app 级凭证，与调用方身份无关，故 web_client 调用可正常生成。
+- **不能用免鉴权云调用**：后台经 web 端 `callFunction` 调用，微信免鉴权拿不到 access_token（`INVALID_WX_ACCESS_TOKEN`）。故云函数自管 token（AppSecret 存环境变量 `WX_APPSECRET`），并需微信「开发设置」中 access_token 的 **IP 白名单未启用**。
