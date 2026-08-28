@@ -12,6 +12,7 @@ const app = cloudbase.init({
 })
 
 const auth = app.auth
+const db = app.database()
 
 // ---- 认证 ----
 
@@ -39,20 +40,51 @@ export async function fetchExhibits(): Promise<Exhibit[]> {
   return (result?.list ?? []) as Exhibit[]
 }
 
-// ---- 展品写（走带鉴权的云函数 manageExhibit）----
+// ---- 展品写（SDK 直连数据库；鉴权由 CloudBase 数据库安全规则把关）----
+//
+// 安全模型：exhibits 集合安全规则设为「读:所有人 / 写:仅登录用户」。
+// 未登录调用会被 CloudBase 直接拒绝，无需应用层口令；每个维护者用自己的账号登录。
 
-type ManageResult = { ok: boolean; data?: unknown; error?: string }
+const COLLECTION = 'exhibits'
+const WRITABLE_FIELDS: (keyof Exhibit)[] = [
+  'exhibitId', 'name', 'dynasty', 'image', 'text', 'audioUrl', 'videoUrl',
+]
 
-async function manage(action: 'create' | 'update' | 'delete', data: Partial<Exhibit>): Promise<ManageResult> {
-  const { result } = await app.callFunction({ name: 'manageExhibit', data: { action, data } })
-  const res = result as ManageResult
-  if (!res?.ok) throw new Error(res?.error || '操作失败')
-  return res
+// 只保留白名单字段，避免把 _id 等写回或写入意外字段
+function pickFields(input: Partial<Exhibit>): Record<string, unknown> {
+  const doc: Record<string, unknown> = {}
+  for (const key of WRITABLE_FIELDS) {
+    if (input[key] !== undefined) doc[key] = input[key]
+  }
+  return doc
 }
 
-export const createExhibit = (data: Exhibit) => manage('create', data)
-export const updateExhibit = (data: Exhibit) => manage('update', data)
-export const deleteExhibit = (locator: { _id?: string; exhibitId?: string }) => manage('delete', locator)
+export async function createExhibit(data: Exhibit): Promise<void> {
+  const doc = pickFields(data)
+  if (!doc.exhibitId) throw new Error('展品编号必填')
+  if (!doc.name) throw new Error('名称必填')
+
+  const dup = await db.collection(COLLECTION).where({ exhibitId: doc.exhibitId }).count()
+  if (((dup as { total?: number }).total ?? 0) > 0) {
+    throw new Error(`展品编号已存在：${doc.exhibitId}`)
+  }
+  await db.collection(COLLECTION).add(doc)
+}
+
+export async function updateExhibit(data: Exhibit): Promise<void> {
+  if (!data._id) throw new Error('缺少记录 _id，无法更新')
+  await db.collection(COLLECTION).doc(data._id).update(pickFields(data))
+}
+
+export async function deleteExhibit(locator: { _id?: string; exhibitId?: string }): Promise<void> {
+  if (locator._id) {
+    await db.collection(COLLECTION).doc(locator._id).remove()
+  } else if (locator.exhibitId) {
+    await db.collection(COLLECTION).where({ exhibitId: locator.exhibitId }).remove()
+  } else {
+    throw new Error('缺少 _id 或 exhibitId，无法删除')
+  }
+}
 
 // ---- 云存储 ----
 

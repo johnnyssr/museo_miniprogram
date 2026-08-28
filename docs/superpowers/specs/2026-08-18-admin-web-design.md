@@ -1,7 +1,7 @@
 # 展品管理 Web 后台（第二阶段：内容管理）设计文档
 
-日期：2026-08-18
-状态：已确认
+日期：2026-08-18（2026-08-28 更新写入鉴权方案）
+状态：已确认（已实现）
 
 ## 目标与范围
 
@@ -14,7 +14,7 @@
 - 账号密码登录（CloudBase 自带）。
 - 展品列表、新增、编辑、删除。
 - 媒体「上传云存储 / 填外部链接」两种模式都支持。
-- 新增写云函数 `manageExhibit`，做管理员鉴权 + 增改删。
+- 写操作用 SDK 直连数据库，鉴权交给**数据库安全规则**（读放开、写仅登录用户）。
 
 **本阶段不做（YAGNI）：**
 - 二维码/小程序码生成、批量导入、富文本编辑、多角色权限、审计日志。
@@ -37,22 +37,24 @@
 │  管理员浏览器                 │         │  微信小程序(现有,不改)    │
 │  Vue3 + Element Plus 后台     │         │  游客扫码/浏览            │
 └──────────────┬──────────────┘         └───────────┬──────────────┘
-               │ @cloudbase/js-sdk                    │ wx.cloud
-               │ (账号密码登录)                        │
+       读│callFunction  写│database()               │ wx.cloud
+        (账号密码登录，写受安全规则约束)              │
                ▼                                      ▼
         ┌──────────────────────────────────────────────────┐
         │   微信云开发环境 cloud1-d6gnwyekz0f64654f          │
         │  ┌───────────┐ ┌──────────────┐ ┌──────────────┐  │
         │  │ exhibits  │ │ 云函数        │ │ 云存储        │  │
         │  │ 集合(共用)│ │ getExhibits  │ │ (图/音/视频)  │  │
-        │  │           │ │ manageExhibit│ │              │  │
+        │  │ 安全规则  │ │ (只读)       │ │              │  │
         │  └───────────┘ └──────────────┘ └──────────────┘  │
         └──────────────────────────────────────────────────┘
 ```
 
 - **读**复用现有 `getExhibits`（列表 / 单查），不改。
-- **写**（增/改/删）全部走新云函数 `manageExhibit`，云函数校验管理员白名单后才操作库；浏览器端 SDK **不直接写库**，从根上杜绝越权。
+- **写**（增/改/删）用 `@cloudbase/js-sdk` 的 `database()` **直连 `exhibits` 集合**。鉴权由**数据库安全规则**把关：`{ "read": true, "write": "auth != null" }` —— 未登录的写请求被 CloudBase 直接拒绝，无需应用层口令/白名单。
 - 媒体上传直传云存储得到 `cloud://` fileID，存入对应字段；小程序端天然能渲染 `cloud://`，无需域名白名单。
+
+> **写入鉴权的取舍（2026-08-28）**：最初设计用云函数 `manageExhibit` 做管理员鉴权。但本环境为「微信云开发」，`getWXContext()` 只对小程序调用返回身份；经 `@cloudbase/js-sdk`（账号密码登录）调用云函数时上下文只有 `SOURCE=web_client`，拿不到用户身份（`caller` 为空），无法在函数内判断管理员。曾以「共享口令」临时把关，但维护繁琐。最终改为 **SDK 直连数据库 + 安全规则**：登录态天然带 `auth`，安全规则按 `auth != null` 放行，每个维护者用自己的账号登录即可。`manageExhibit` 云函数因此废弃。
 
 ## 二、数据模型（沿用第一阶段，不改结构）
 
@@ -62,7 +64,7 @@
 
 仓库内新增目录 `admin/`，Vue 3 + Vite + Element Plus + Vue Router，依赖 `@cloudbase/js-sdk`。
 
-**核心封装 `src/cloudbase.ts`：** 初始化 CloudBase（env = `cloud1-d6gnwyekz0f64654f`），封装 `login` / `logout` / `callFunction` / `uploadFile` / `getTempFileURL`。
+**核心封装 `src/cloudbase.ts`：** 初始化 CloudBase（env = `cloud1-d6gnwyekz0f64654f`，只需 `env` + `region`），封装 `login` / `logout` / `currentUserId`、只读 `fetchExhibits`（走 `getExhibits`）、写操作 `createExhibit` / `updateExhibit` / `deleteExhibit`（`database()` 直连集合），以及 `uploadMedia` / `toPreviewUrl`（云存储）。写操作只保留字段白名单，避免写回 `_id` 等意外字段。
 
 **页面：**
 
@@ -79,16 +81,24 @@
 - `text` 文本描述（多行）
 - `image` / `audioUrl` / `videoUrl`：每个都可「上传云存储」**或**「填外部链接」二选一切换；上传成功存 `cloud://` fileID 并回显预览。
 
-## 四、云函数 `manageExhibit`
+## 四、写操作：SDK 直连数据库 + 安全规则
 
-位置：`cloudfunctions/manageExhibit/`，Node.js + `wx-server-sdk`（与 `getExhibits` 同风格）。
+写路径不再经云函数，直接用 `app.database().collection('exhibits')` 操作，鉴权交给数据库安全规则：
 
-- 入口按 `event.action` 分支：`create` / `update` / `delete`。
-- **每次先鉴权**：取调用者身份（登录态 uid / openid），比对管理员白名单（环境变量或 `admins` 集合），非管理员直接拒绝。
-- `create`：`exhibitId` 必填 + 集合内查重，写入文档。
-- `update`：按 `exhibitId` / `_id` 更新。
-- `delete`：按 `exhibitId` / `_id` 删除。
-- 统一返回 `{ ok: true, data }` 或 `{ ok: false, error }`。
+- `createExhibit`：`exhibitId` / `name` 必填 + 按 `exhibitId` 查重，`add(doc)` 写入（js-sdk 的 `add` 直接收文档，不套 `{ data }`）。
+- `updateExhibit`：按 `_id` `doc(_id).update(doc)`。
+- `deleteExhibit`：优先按 `_id`，否则按 `exhibitId` `where().remove()`。
+- 三者都先过字段白名单 `pickFields`（`exhibitId,name,dynasty,image,text,audioUrl,videoUrl`），只写允许的字段。
+
+**安全规则**（控制台「文档型数据库 → exhibits → 权限设置」自定义安全规则）：
+
+```json
+{ "read": true, "write": "auth != null" }
+```
+
+未登录的写请求被 CloudBase 拒绝；登录态自动携带 `auth`，故任何登录用户可维护。需**关闭匿名登录**，使「已登录 = 持账号的管理员」。
+
+> `manageExhibit` 云函数已废弃（原基于口令/白名单鉴权），仓库不再保留其代码；若曾在控制台部署过，可一并删除。
 
 ## 五、媒体上传流程
 
@@ -99,9 +109,10 @@
 
 ## 六、数据安全
 
-- `exhibits` 集合权限：所有人可读、仅管理端可写（写只经云函数）。
-- 云存储安全规则：限制写权限。
-- 所有写操作经 `manageExhibit` 鉴权，浏览器端不直接写库/存储敏感操作。
+- `exhibits` 集合安全规则：`{ "read": true, "write": "auth != null" }` —— 所有人可读、仅登录用户可写。
+- 关闭匿名登录，令「已登录」等价于「持有账号的管理员」。
+- 云存储安全规则：按需限制写权限（默认登录可写即可满足后台上传）。
+- 写操作全部要求登录态（`auth != null`），未登录请求由 CloudBase 拒绝；前端另有路由守卫，未登录跳登录页。
 
 ## 七、测试策略（手动验证）
 
@@ -109,12 +120,11 @@
 2. 新增一条展品 → 上传图片/音频（或填外链）→ 保存。
 3. 微信开发者工具打开小程序，输入该 `exhibitId`，确认图文/音视频正常显示。
 4. 编辑、删除各验证一遍，列表实时刷新。
-5. `manageExhibit` 用非管理员/未登录调用应被拒绝。
+5. 未登录时写操作应被安全规则拒绝（登录能写、退出后不能写）。
 6. 部署到 CloudBase 静态托管，用真实域名再走一遍。
 
 ## 八、依赖用户的账号操作（非写代码）
 
-- CloudBase 开通账号密码登录，创建测试管理员账号。
-- 配置 `exhibits` 集合读写权限、云存储安全规则。
-- 部署 `manageExhibit`，配置管理员白名单。
+- CloudBase 开通账号密码登录，创建管理员账号；**关闭匿名登录**。
+- 给 `exhibits` 集合配安全规则 `{ "read": true, "write": "auth != null" }`；按需配云存储安全规则。
 - 部署静态托管，拿到后台访问地址。

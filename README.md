@@ -32,8 +32,7 @@ miniprogram/
 │   └── exhibit/           # 展品详情页
 └── app.json               # 页面注册与全局配置
 cloudfunctions/
-├── getExhibits/           # 云函数：查询展品（传 exhibitId 查单个，不传查全部）
-└── manageExhibit/         # 云函数：展品写操作（create/update/delete），带管理员鉴权
+└── getExhibits/           # 云函数：查询展品（传 exhibitId 查单个，不传查全部）
 admin/                     # 展品管理 Web 后台（Vue3 + Vite + Element Plus，独立静态站点）
 docs/superpowers/          # 设计文档、实现计划、数据录入清单
 test/                      # 展品测试二维码（exhibit-001/002/003）
@@ -64,8 +63,8 @@ test/                      # 展品测试二维码（exhibit-001/002/003）
    （仓库当前填的是原作者的环境 ID，其他开发者需替换为自己的。）
 3. **部署云函数**：右键 `cloudfunctions/getExhibits` →「上传并部署：云端安装依赖」。
    - 若右键无此菜单：重启开发者工具（使其识别 `cloudfunctionRoot`），并确认 `cloudfunctions` 根目录已关联你的云环境。
-4. **建集合并录入数据**：在云开发控制台「数据库」新建集合 `exhibits`，权限设为
-   **「所有用户可读，仅创建者可读写」**，按 `docs/superpowers/exhibits-seed-data.md` 录入 3 条初始记录。
+4. **建集合并录入数据**：在云开发控制台「数据库」新建集合 `exhibits`，按 `docs/superpowers/exhibits-seed-data.md` 录入 3 条初始记录。
+   - 权限：小程序读取走云函数 `getExhibits`（服务端管理员权限），集合权限本身不影响小程序读。若同时使用 Web 管理后台，请按下文「展品管理后台」把安全规则设为 `{ "read": true, "write": "auth != null" }`。
 
 完成后编译运行，列表页应能从云端加载出展品。
 
@@ -101,32 +100,36 @@ test/                      # 展品测试二维码（exhibit-001/002/003）
 ### 架构
 
 - **读**：复用小程序同款云函数 `getExhibits`（列表 / 单查）。
-- **写**：全部经云函数 `manageExhibit`，函数内校验管理员白名单后才操作数据库；浏览器端不直接写库。
+- **写**：登录后用 `@cloudbase/js-sdk` **直连云数据库** `exhibits` 集合（增/改/删）。鉴权由**数据库安全规则**把关：读放开、写仅限已登录用户，未登录调用会被 CloudBase 直接拒绝。
 - **媒体**：上传直传云存储得到 `cloud://` fileID 存入字段；预览时用 `getTempFileURL` 换临时链接。小程序天然能渲染 `cloud://`。
 
 ### 云环境配置（首次，控制台操作）
 
-1. **部署 `manageExhibit`**：开发者工具右键 `cloudfunctions/manageExhibit` →「上传并部署：云端安装依赖」。
-2. **配管理员白名单**：在云开发控制台该云函数的「环境变量」里设 `ADMIN_IDS`，值为管理员身份标识（多个用英文逗号分隔）。首次可先随意填一个，登录后台后从 `manageExhibit` 日志里看到实际调用者标识，再回填正确值。
-3. **开通账号密码登录**：在 CloudBase 控制台「环境 → 登录授权/用户管理」开通用户名密码登录，创建管理员账号。
-4. **配置 Web 访问**：在「环境 → 访问方式 → Web」创建凭证（accessKey / publishable key），并把后台部署域名（或本地 `http://localhost:5173`）加入允许来源。
-5. **集合权限**：`exhibits` 设为「所有用户可读、仅管理端可写」（写只走云函数）。云存储安全规则限制写权限。
+1. **开通账号密码登录**：在 CloudBase 控制台「身份认证 → 登录方式」开通用户名密码登录，创建管理员账号。**关闭「匿名登录」**，确保「已登录 = 持有账号的管理员」。
+2. **配 `exhibits` 集合安全规则**：控制台「文档型数据库 → exhibits → 权限设置」切到自定义安全规则，填：
+
+   ```json
+   { "read": true, "write": "auth != null" }
+   ```
+
+   含义：任何人可读（小程序游客能看），仅登录用户可写。每个维护者用自己的账号登录即可维护，无需额外口令/白名单。
+3. **云存储**：按需在「云存储 → 权限设置」限制写权限（默认登录可写即可满足后台上传）。
+
+> 无需创建 Web accessKey：`@cloudbase/js-sdk` 2.x 初始化只需 `env` + `region`。
 
 ### 本地运行
 
 ```bash
 cd admin
 npm install
-# 首次：把上一步拿到的 accessKey/region 写入 admin/.env.local（见下），或直接改 src/config.ts 默认值
-npm run dev        # 打开 http://localhost:5173
+npm run dev        # 打开 http://localhost:5173，用管理员账号密码登录
 ```
 
-`admin/.env.local`（不入库）可覆盖云环境配置：
+`admin/.env.local`（不入库）可覆盖云环境配置（一般无需改）：
 
 ```
 VITE_CB_ENV=cloud1-d6gnwyekz0f64654f
 VITE_CB_REGION=ap-shanghai
-VITE_CB_ACCESS_KEY=你的凭证
 ```
 
 ### 构建与部署
