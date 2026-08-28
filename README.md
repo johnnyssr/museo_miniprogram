@@ -32,7 +32,8 @@ miniprogram/
 │   └── exhibit/           # 展品详情页
 └── app.json               # 页面注册与全局配置
 cloudfunctions/
-└── getExhibits/           # 云函数：查询展品（传 exhibitId 查单个，不传查全部）
+├── getExhibits/           # 云函数：查询展品（传 exhibitId 查单个，不传查全部）
+└── getExhibitQRCode/      # 云函数：生成展品小程序码（wxacode.getUnlimited），供后台下载
 admin/                     # 展品管理 Web 后台（Vue3 + Vite + Element Plus，独立静态站点）
 docs/superpowers/          # 设计文档、实现计划、数据录入清单
 test/                      # 展品测试二维码（exhibit-001/002/003）
@@ -102,6 +103,19 @@ test/                      # 展品测试二维码（exhibit-001/002/003）
 - **读**：复用小程序同款云函数 `getExhibits`（列表 / 单查）。
 - **写**：登录后用 `@cloudbase/js-sdk` **直连云数据库** `exhibits` 集合（增/改/删）。鉴权由**数据库安全规则**把关：读放开、写仅限已登录用户，未登录调用会被 CloudBase 直接拒绝。
 - **媒体**：上传直传云存储得到 `cloud://` fileID 存入字段；预览时用 `getTempFileURL` 换临时链接。小程序天然能渲染 `cloud://`。
+
+### 展品二维码（小程序码）
+
+后台列表每行有「二维码」按钮，点开可预览并**下载该展品的小程序码 PNG**。它由云函数 `getExhibitQRCode` 调微信 `wxacode.getUnlimited` 生成，`scene` 即 `exhibitId`。
+
+- **两种扫码都能进**：微信原生「扫一扫」和小程序内「扫一扫」扫这张码，都会打开小程序展品详情页对应展品。这是普通文本二维码做不到的（文本码只有小程序内扫一扫能识别）。
+- **展品页入口兼容**：[miniprogram/pages/exhibit/exhibit.ts](miniprogram/pages/exhibit/exhibit.ts) 的 `onLoad` 同时读 `query.id`（列表跳转/文本扫码）和 `query.scene`（小程序码）。
+- **版本选择**：弹窗可选「正式版 / 体验版 / 开发版」。
+  - **正式版（release）**：需小程序**已发布正式版**，游客微信扫码才生效。
+  - **体验版（trial）/ 开发版（develop）**：发布前自测用，**仅体验成员/开发者**能扫进。
+- **约束**：`scene` 上限 32 字符，且仅支持数字/字母及 `!#$&'()*+,/:;=?@-._~`；`exhibitId` 需落在此范围（如 `specimen-001` 可用）。
+
+> 部署此功能需：①在开发者工具部署云函数 `getExhibitQRCode`（云端安装依赖）；②小程序展品页已含 `scene` 解析（本仓库已改）；③正式对外前发布小程序正式版，并把弹窗版本切到「正式版」。
 
 ### 云环境配置（首次，控制台操作）
 

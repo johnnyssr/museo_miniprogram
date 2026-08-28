@@ -40,6 +40,29 @@ export async function fetchExhibits(): Promise<Exhibit[]> {
   return (result?.list ?? []) as Exhibit[]
 }
 
+// ---- 展品小程序码（云函数 getExhibitQRCode → wxacode.getUnlimited）----
+
+export type QRCodeEnvVersion = 'release' | 'trial' | 'develop'
+
+/**
+ * 取某展品的小程序码，返回可直接用于 <img src> / 下载的 data URL。
+ * envVersion：release 正式版（默认）/ trial 体验版 / develop 开发版（发布前自测用）。
+ */
+export async function fetchExhibitQRCode(
+  exhibitId: string,
+  envVersion: QRCodeEnvVersion = 'release',
+): Promise<string> {
+  const { result } = await app.callFunction({
+    name: 'getExhibitQRCode',
+    data: { exhibitId, envVersion },
+  })
+  const res = result as { ok?: boolean; error?: string; contentType?: string; base64?: string }
+  if (!res?.ok || !res.base64) {
+    throw new Error(res?.error || '生成小程序码失败')
+  }
+  return `data:${res.contentType || 'image/png'};base64,${res.base64}`
+}
+
 // ---- 展品写（SDK 直连数据库；鉴权由 CloudBase 数据库安全规则把关）----
 //
 // 安全模型：exhibits 集合安全规则设为「读:所有人 / 写:仅登录用户」。

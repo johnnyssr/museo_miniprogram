@@ -22,7 +22,10 @@ Component({
   },
   methods: {
     async onLoad(query: Record<string, string>) {
-      const id = (query.id || '').trim()
+      // 入口兼容两种来源：
+      //  - 列表跳转 / 普通扫码：参数在 query.id
+      //  - 小程序码（wxacode）扫码：参数在 query.scene（值即 exhibitId，可能被 URL 编码）
+      const id = (query.id || decodeURIComponent(query.scene || '') || '').trim()
       wx.showLoading({ title: '加载中' })
       try {
         const exhibit = await getExhibitById(id)

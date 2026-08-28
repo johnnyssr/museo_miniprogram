@@ -1,0 +1,9 @@
+{
+  "name": "getExhibitQRCode",
+  "version": "1.0.0",
+  "description": "生成展品小程序码（wxacode.getUnlimited），返回 base64 图片供后台下载",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
