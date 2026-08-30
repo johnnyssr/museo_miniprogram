@@ -150,7 +150,7 @@ npm run dev        # 打开 http://localhost:5173，用管理员账号密码登�
 `admin/.env.local`（不入库）可覆盖云环境配置（一般无需改）：
 
 ```
-VITE_CB_ENV=cloud1-d6gnwyekz0f64654f
+VITE_CB_ENV=cloud1-d9g0ig4ad8e90ecde
 VITE_CB_REGION=ap-shanghai
 ```
 

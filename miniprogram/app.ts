@@ -7,7 +7,7 @@ App<IAppOption>({
       console.error('当前基础库版本过低，无法使用云能力')
     } else {
       wx.cloud.init({
-        env: 'cloud1-d6gnwyekz0f64654f',
+        env: 'cloud1-d9g0ig4ad8e90ecde',
         traceUser: true,
       })
     }

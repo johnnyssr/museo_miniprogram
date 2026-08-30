@@ -15,7 +15,7 @@
 
 const https = require('https')
 
-const DEFAULT_APPID = 'wxf35947679290f7f7'
+const DEFAULT_APPID = 'wxb915f657bc03e253'
 const EXHIBIT_PAGE = 'pages/exhibit/exhibit'
 
 // getwxacodeunlimit 的 scene 限 32 字符，且仅支持这些字符
