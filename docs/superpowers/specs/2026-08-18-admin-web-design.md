@@ -129,19 +129,22 @@
 - 给 `exhibits` 集合配安全规则 `{ "read": true, "write": "auth != null" }`；按需配云存储安全规则。
 - 部署静态托管，拿到后台访问地址。
 
-## 九、展品小程序码（2026-08-29 增补）
+## 九、展品二维码（2026-08-29 增补，2026-08-30 补普通二维码模式）
 
 > 原 YAGNI 列表把「二维码/小程序码生成」排除在首期外；上线后按用户需求增补此功能。
 
-**目标**：后台为每个展品生成可下载的**小程序码**，微信原生「扫一扫」与小程序内「扫一扫」扫码都能进入对应展品详情页（普通文本二维码只有小程序内扫一扫可识别，故不采用）。
+**目标**：后台为每个展品生成可下载的二维码，扫码进入对应展品详情页。因小程序**尚未上线**，弹窗提供两种模式：
+
+- **普通二维码（默认、当前即用）**：前端用 `qrcode` 库直接把 `exhibitId` 生成二维码 PNG。**仅小程序内「扫一扫」**可识别（首页 `wx.scanCode` 读出编号 → 跳详情页）。无需云函数/AppSecret，未上线即可用。
+- **小程序码（上线后启用）**：云函数生成，微信原生「扫一扫」与小程序内「扫一扫」都能进；发布前只能体验成员/开发者扫。
 
 **实现**：
 
-- 新增云函数 `cloudfunctions/getExhibitQRCode`：用小程序 AppID + AppSecret 换取 `access_token`（`/cgi-bin/stable_token`），再调 HTTP `getwxacodeunlimit`（`scene=exhibitId`、`page='pages/exhibit/exhibit'`、`env_version`、`check_path:false`、`width:430`），返回图片 base64（`{ ok, contentType, base64 }`）。
-- 小程序展品页 `onLoad` 兼容入口：`query.id`（列表/文本扫码）与 `query.scene`（小程序码）。**这是对小程序的唯一改动。**
-- 后台 `cloudbase.ts` 加 `fetchExhibitQRCode(exhibitId, envVersion)` → 返回 data URL；列表页每行「二维码」按钮打开弹窗预览 + 下载 PNG，含 `release/trial/develop` 版本选择。
+- 前端 `ExhibitListView.vue`：弹窗「普通二维码 / 小程序码」模式切换；普通模式 `QRCode.toDataURL(exhibitId)`，小程序码模式调 `fetchExhibitQRCode` 并含 `release/trial/develop` 版本选择；两种模式都能下载 PNG（文件名 `qrcode-text-*` / `qrcode-mp-*`）。
+- 云函数 `cloudfunctions/getExhibitQRCode`：用小程序 AppID + AppSecret 换取 `access_token`（`/cgi-bin/stable_token`），再调 HTTP `getwxacodeunlimit`（`scene=exhibitId`、`page='pages/exhibit/exhibit'`、`env_version`、`check_path:false`、`width:430`），返回图片 base64（`{ ok, contentType, base64 }`）。
+- 小程序展品页 `onLoad` 兼容入口：`query.id`（列表/普通文本扫码）与 `query.scene`（小程序码）。**这是对小程序的唯一改动。**
 
-**约束**：
+**约束**（仅小程序码模式）：
 
 - `scene` 上限 32 字符，仅支持数字/字母及 `!#$&'()*+,/:;=?@-._~`。
 - `envVersion=release` 需小程序**已发布正式版**，游客扫码才生效；发布前用 `trial/develop` 自测（仅体验成员/开发者可扫）。

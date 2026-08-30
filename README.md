@@ -104,18 +104,18 @@ test/                      # 展品测试二维码（exhibit-001/002/003）
 - **写**：登录后用 `@cloudbase/js-sdk` **直连云数据库** `exhibits` 集合（增/改/删）。鉴权由**数据库安全规则**把关：读放开、写仅限已登录用户，未登录调用会被 CloudBase 直接拒绝。
 - **媒体**：上传直传云存储得到 `cloud://` fileID 存入字段；预览时用 `getTempFileURL` 换临时链接。小程序天然能渲染 `cloud://`。
 
-### 展品二维码（小程序码）
+### 展品二维码
 
-后台列表每行有「二维码」按钮，点开可预览并**下载该展品的小程序码 PNG**。它由云函数 `getExhibitQRCode` 调微信 `wxacode.getUnlimited` 生成，`scene` 即 `exhibitId`。
+后台列表每行有「二维码」按钮，点开可预览并**下载该展品二维码 PNG**。弹窗支持两种模式：
 
-- **两种扫码都能进**：微信原生「扫一扫」和小程序内「扫一扫」扫这张码，都会打开小程序展品详情页对应展品。这是普通文本二维码做不到的（文本码只有小程序内扫一扫能识别）。
-- **展品页入口兼容**：[miniprogram/pages/exhibit/exhibit.ts](miniprogram/pages/exhibit/exhibit.ts) 的 `onLoad` 同时读 `query.id`（列表跳转/文本扫码）和 `query.scene`（小程序码）。
-- **版本选择**：弹窗可选「正式版 / 体验版 / 开发版」。
-  - **正式版（release）**：需小程序**已发布正式版**，游客微信扫码才生效。
-  - **体验版（trial）/ 开发版（develop）**：发布前自测用，**仅体验成员/开发者**能扫进。
-- **约束**：`scene` 上限 32 字符，且仅支持数字/字母及 `!#$&'()*+,/:;=?@-._~`；`exhibitId` 需落在此范围（如 `specimen-001` 可用）。
+- **普通二维码**（当前阶段默认、即用）：前端用 `qrcode` 库生成，内容即 `exhibitId`。**仅小程序内「扫一扫」**可识别跳转（首页扫码 → 展品详情页）。小程序未上线也能用，无需云函数/AppSecret。
+- **小程序码**（上线后启用）：由云函数 `getExhibitQRCode` 调微信 `wxacode.getUnlimited` 生成，`scene` 即 `exhibitId`。**微信原生「扫一扫」和小程序内「扫一扫」都能进**。
+  - **版本选择**：可选「正式版 / 体验版 / 开发版」。正式版（release）需小程序**已发布正式版**游客扫码才生效；体验版（trial）/ 开发版（develop）发布前自测用，**仅体验成员/开发者**能扫进。
+  - **约束**：`scene` 上限 32 字符，且仅支持数字/字母及 `!#$&'()*+,/:;=?@-._~`；`exhibitId` 需落在此范围（如 `specimen-001` 可用）。
 
-> 部署此功能需：
+- **展品页入口兼容**：[miniprogram/pages/exhibit/exhibit.ts](miniprogram/pages/exhibit/exhibit.ts) 的 `onLoad` 同时读 `query.id`（列表跳转/普通文本扫码）和 `query.scene`（小程序码）。
+
+> 启用**小程序码**模式需：
 > 1. 在开发者工具部署云函数 `getExhibitQRCode`；
 > 2. 在该云函数「环境变量」配置 `WX_APPSECRET`（小程序 AppSecret，见微信公众平台「开发管理 → 开发设置」）；`WX_APPID` 可选（缺省用代码内默认 AppID）；
 > 3. 确认微信「开发设置」中 **access_token 的 IP 白名单未启用**（云函数出口 IP 不固定，启用会导致换 token 失败）；
@@ -123,6 +123,7 @@ test/                      # 展品测试二维码（exhibit-001/002/003）
 > 5. 正式对外前发布小程序正式版，并把弹窗版本切到「正式版」。
 >
 > 说明：后台是网页（web_client）调用云函数，微信「免鉴权云调用」拿不到 access_token（会报 `INVALID_WX_ACCESS_TOKEN`），故云函数用 AppID+AppSecret 自行换取 `access_token` 再调 `getwxacodeunlimit`。AppSecret 只存云函数环境变量，不进前端代码。
+> 未上线阶段用**普通二维码**模式即可，无需以上任何配置。
 
 ### 云环境配置（首次，控制台操作）
 

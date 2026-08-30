@@ -11,10 +11,12 @@
   "dependencies": {
     "@cloudbase/js-sdk": "^2.7.0",
     "element-plus": "^2.7.0",
+    "qrcode": "^1.5.4",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "@vitejs/plugin-vue": "^5.0.0",
     "typescript": "~5.4.0",
     "vite": "^5.2.0",

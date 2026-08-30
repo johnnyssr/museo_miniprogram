@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import QRCode from 'qrcode'
 import {
   fetchExhibits,
   deleteExhibit,
@@ -16,8 +17,9 @@ const router = useRouter()
 const loading = ref(false)
 const rows = ref<Array<Exhibit & { _thumb?: string }>>([])
 
-// 小程序码弹窗状态
+// 二维码弹窗状态
 const qrVisible = ref(false)
+const qrMode = ref<'text' | 'mp'>('text') // text=普通二维码（现在即用）, mp=小程序码（发布后用）
 const qrLoading = ref(false)
 const qrDataUrl = ref('')
 const qrError = ref('')
@@ -71,16 +73,39 @@ async function onLogout() {
   router.replace('/login')
 }
 
-// 打开小程序码弹窗
+// 打开二维码弹窗（默认普通二维码，当前阶段即可用）
 function openQR(row: Exhibit) {
   qrTarget.value = { exhibitId: row.exhibitId, name: row.name }
+  qrMode.value = 'text'
   qrDataUrl.value = ''
   qrError.value = ''
   qrVisible.value = true
-  loadQR()
+  renderQR()
 }
 
-async function loadQR() {
+// 切换模式 / 版本后重新生成
+function renderQR() {
+  if (qrMode.value === 'text') genTextQR()
+  else loadMpQR()
+}
+
+// 普通文本二维码：前端生成，编码展品编号（小程序内「扫一扫」可识别）
+async function genTextQR() {
+  if (!qrTarget.value) return
+  qrLoading.value = true
+  qrError.value = ''
+  qrDataUrl.value = ''
+  try {
+    qrDataUrl.value = await QRCode.toDataURL(qrTarget.value.exhibitId, { width: 240, margin: 1 })
+  } catch (err) {
+    qrError.value = err instanceof Error ? err.message : '生成二维码失败'
+  } finally {
+    qrLoading.value = false
+  }
+}
+
+// 小程序码：调云函数生成（需配 AppSecret；正式版需小程序已发布）
+async function loadMpQR() {
   if (!qrTarget.value) return
   qrLoading.value = true
   qrError.value = ''
@@ -96,9 +121,10 @@ async function loadQR() {
 
 function downloadQR() {
   if (!qrDataUrl.value || !qrTarget.value) return
+  const prefix = qrMode.value === 'text' ? 'qrcode-text' : 'qrcode-mp'
   const a = document.createElement('a')
   a.href = qrDataUrl.value
-  a.download = `qrcode-${qrTarget.value.exhibitId}.png`
+  a.download = `${prefix}-${qrTarget.value.exhibitId}.png`
   a.click()
 }
 
@@ -139,11 +165,16 @@ onMounted(load)
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="qrVisible" title="展品小程序码" width="360">
+    <el-dialog v-model="qrVisible" title="展品二维码" width="360">
       <div v-if="qrTarget" class="qr-body">
         <p class="qr-meta">{{ qrTarget.name }}（{{ qrTarget.exhibitId }}）</p>
 
-        <el-radio-group v-model="qrEnv" size="small" @change="loadQR">
+        <el-radio-group v-model="qrMode" size="small" @change="renderQR">
+          <el-radio-button value="text">普通二维码</el-radio-button>
+          <el-radio-button value="mp">小程序码</el-radio-button>
+        </el-radio-group>
+
+        <el-radio-group v-if="qrMode === 'mp'" v-model="qrEnv" size="small" @change="loadMpQR">
           <el-radio-button value="release">正式版</el-radio-button>
           <el-radio-button value="trial">体验版</el-radio-button>
           <el-radio-button value="develop">开发版</el-radio-button>
@@ -152,13 +183,20 @@ onMounted(load)
         <div class="qr-canvas" v-loading="qrLoading">
           <el-image v-if="qrDataUrl" :src="qrDataUrl" style="width: 240px; height: 240px" />
           <el-alert v-else-if="qrError" :title="qrError" type="error" :closable="false" show-icon />
-          <span v-else-if="!qrLoading" class="muted">点击上方版本生成</span>
+          <span v-else-if="!qrLoading" class="muted">生成中…</span>
         </div>
 
         <el-alert
+          v-if="qrMode === 'text'"
           type="info"
           :closable="false"
-          title="正式版需小程序已发布后，游客微信扫码才生效；发布前可选体验版/开发版自测（仅体验成员/开发者可扫）。"
+          title="普通二维码：编码展品编号，仅小程序内「扫一扫」可识别跳转。当前未上线阶段即可用。"
+        />
+        <el-alert
+          v-else
+          type="info"
+          :closable="false"
+          title="小程序码：微信原生扫一扫也能进。正式版需小程序已发布后游客扫码才生效；发布前用体验版/开发版自测（仅体验成员/开发者可扫）。"
         />
       </div>
       <template #footer>
