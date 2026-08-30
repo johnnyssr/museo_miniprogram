@@ -24,7 +24,14 @@ const SCENE_ALLOWED = /^[0-9a-zA-Z!#$&'()*+,/:;=?@\-._~]+$/
 
 function httpsRequest (options, bodyObj) {
   return new Promise((resolve, reject) => {
-    const req = https.request(options, (res) => {
+    // 显式序列化 body 并带上 Content-Length，避免默认 chunked 被微信接口拒绝而返回空 body
+    const payload = bodyObj === undefined
+      ? null
+      : Buffer.from(typeof bodyObj === 'string' ? bodyObj : JSON.stringify(bodyObj), 'utf8')
+    const headers = Object.assign({}, options.headers)
+    if (payload) headers['Content-Length'] = payload.length
+
+    const req = https.request(Object.assign({}, options, { headers }), (res) => {
       const chunks = []
       res.on('data', (c) => chunks.push(c))
       res.on('end', () => resolve({
@@ -34,11 +41,22 @@ function httpsRequest (options, bodyObj) {
       }))
     })
     req.on('error', reject)
-    if (bodyObj !== undefined) {
-      req.write(typeof bodyObj === 'string' ? bodyObj : JSON.stringify(bodyObj))
-    }
+    if (payload) req.write(payload)
     req.end()
   })
+}
+
+// 把响应体安全解析为 JSON；空/非 JSON 时抛出带状态码和内容片段的错误，便于定位
+function parseJson (res, label) {
+  const text = res.body.toString('utf8').trim()
+  if (!text) {
+    throw new Error(`${label}：微信返回空响应（HTTP ${res.statusCode}）。请确认云函数已联网、access_token IP 白名单已关闭。`)
+  }
+  try {
+    return JSON.parse(text)
+  } catch (e) {
+    throw new Error(`${label}：微信返回非 JSON（HTTP ${res.statusCode}）：${text.slice(0, 200)}`)
+  }
 }
 
 // 用 stable_token 换取 access_token（不会踢掉其它服务在用的 token）
@@ -50,7 +68,7 @@ async function getAccessToken (appid, secret) {
     headers: { 'Content-Type': 'application/json' },
   }, { grant_type: 'client_credential', appid, secret, force_refresh: false })
 
-  const data = JSON.parse(res.body.toString('utf8'))
+  const data = parseJson(res, '获取 access_token 失败')
   if (!data.access_token) {
     throw new Error(`获取 access_token 失败：errcode=${data.errcode} ${data.errmsg || ''}`)
   }
@@ -68,8 +86,11 @@ async function getWxaCode (token, { scene, page, envVersion }) {
   const ct = res.headers['content-type'] || ''
   // 成功返回二进制图片；失败返回 JSON（首字节为 '{'）
   if (ct.includes('application/json') || res.body[0] === 0x7b) {
-    const err = JSON.parse(res.body.toString('utf8'))
+    const err = parseJson(res, '生成小程序码失败')
     throw new Error(`生成小程序码失败：errcode=${err.errcode} ${err.errmsg || ''}`)
+  }
+  if (!res.body || !res.body.length) {
+    throw new Error(`生成小程序码失败：微信返回空响应（HTTP ${res.statusCode}）`)
   }
   return { contentType: ct || 'image/png', buffer: res.body }
 }

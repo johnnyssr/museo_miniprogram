@@ -9,7 +9,6 @@ import {
   logout,
   toPreviewUrl,
   fetchExhibitQRCode,
-  type QRCodeEnvVersion,
 } from '../cloudbase'
 import type { Exhibit } from '../types/exhibit'
 
@@ -23,7 +22,6 @@ const qrMode = ref<'text' | 'mp'>('text') // text=普通二维码（现在即用
 const qrLoading = ref(false)
 const qrDataUrl = ref('')
 const qrError = ref('')
-const qrEnv = ref<QRCodeEnvVersion>('release')
 const qrTarget = ref<{ exhibitId: string; name: string } | null>(null)
 
 async function load() {
@@ -111,7 +109,7 @@ async function loadMpQR() {
   qrError.value = ''
   qrDataUrl.value = ''
   try {
-    qrDataUrl.value = await fetchExhibitQRCode(qrTarget.value.exhibitId, qrEnv.value)
+    qrDataUrl.value = await fetchExhibitQRCode(qrTarget.value.exhibitId, 'release')
   } catch (err) {
     qrError.value = err instanceof Error ? err.message : '生成小程序码失败'
   } finally {
@@ -174,12 +172,6 @@ onMounted(load)
           <el-radio-button value="mp">小程序码</el-radio-button>
         </el-radio-group>
 
-        <el-radio-group v-if="qrMode === 'mp'" v-model="qrEnv" size="small" @change="loadMpQR">
-          <el-radio-button value="release">正式版</el-radio-button>
-          <el-radio-button value="trial">体验版</el-radio-button>
-          <el-radio-button value="develop">开发版</el-radio-button>
-        </el-radio-group>
-
         <div class="qr-canvas" v-loading="qrLoading">
           <el-image v-if="qrDataUrl" :src="qrDataUrl" style="width: 240px; height: 240px" />
           <el-alert v-else-if="qrError" :title="qrError" type="error" :closable="false" show-icon />
@@ -196,7 +188,7 @@ onMounted(load)
           v-else
           type="info"
           :closable="false"
-          title="小程序码：微信原生扫一扫也能进。正式版需小程序已发布后游客扫码才生效；发布前用体验版/开发版自测（仅体验成员/开发者可扫）。"
+          title="小程序码：微信原生扫一扫也能进。需小程序已发布正式版后，游客扫码才生效。"
         />
       </div>
       <template #footer>
