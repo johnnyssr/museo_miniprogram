@@ -1,7 +1,7 @@
 /**index.wxss**/
 page {
   height: 100vh;
-  background: #f5f3ee;
+  background: #f2f7f7;
 }
 .container {
   display: flex;
@@ -16,16 +16,16 @@ page {
 .title {
   font-size: 52rpx;
   font-weight: bold;
-  color: #3a2f22;
+  color: #183b40;
 }
 .subtitle {
   margin-top: 20rpx;
   font-size: 28rpx;
-  color: #8a7d6a;
+  color: #7a9196;
 }
 .scan-btn {
   width: 60%;
-  background: #8a6d3b;
+  background: #1f6f78;
   color: #fff;
   border-radius: 48rpx;
   font-size: 32rpx;
@@ -33,15 +33,15 @@ page {
 .hint {
   margin-top: 40rpx;
   font-size: 24rpx;
-  color: #b0a692;
+  color: #a9bcc0;
   padding: 0 60rpx;
   text-align: center;
 }
 .browse-link {
   margin-top: 32rpx;
   font-size: 28rpx;
-  color: #8a6d3b;
+  color: #1f6f78;
   padding: 12rpx 24rpx;
-  border: 1rpx solid #d8c9ad;
+  border: 1rpx solid #cfe1e2;
   border-radius: 40rpx;
 }
