@@ -30,13 +30,6 @@ page {
   border-radius: 48rpx;
   font-size: 32rpx;
 }
-.hint {
-  margin-top: 40rpx;
-  font-size: 24rpx;
-  color: #9fc4d0;
-  padding: 0 60rpx;
-  text-align: center;
-}
 .browse-link {
   margin-top: 32rpx;
   font-size: 28rpx;
