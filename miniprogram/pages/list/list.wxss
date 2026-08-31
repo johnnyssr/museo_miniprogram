@@ -44,7 +44,7 @@
   font-weight: bold;
   color: #0d3a48;
 }
-.card-dynasty {
+.card-summary {
   margin-top: 10rpx;
   font-size: 26rpx;
   color: #0e88ab;

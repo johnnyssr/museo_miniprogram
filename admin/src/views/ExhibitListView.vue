@@ -9,7 +9,6 @@ import {
   deleteExhibitsBatch,
   toPreviewUrl,
   fetchExhibitQRCode,
-  updateExhibitField,
 } from '../cloudbase'
 import type { Exhibit } from '../types/exhibit'
 import { collectQrCodes, exportQrZip, printQrSheet } from '../utils/qrExport'
@@ -20,19 +19,14 @@ const rows = ref<Array<Exhibit & { _thumb?: string }>>([])
 
 // 列表筛选 / 排序 / 分页（数据量小，全部在已加载的 rows 上做客户端处理）
 const keyword = ref('')
-const dynastyFilter = ref('')
 const sortBy = ref<'exhibitId' | 'name'>('exhibitId')
 const page = ref(1)
 const pageSize = ref(20)
-
-const dynastyOptions = computed(() =>
-  Array.from(new Set(rows.value.map(e => e.dynasty).filter(Boolean))) as string[])
 
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
   return rows.value
     .filter(e => !kw || e.name.toLowerCase().includes(kw) || e.exhibitId.toLowerCase().includes(kw))
-    .filter(e => !dynastyFilter.value || e.dynasty === dynastyFilter.value)
     .slice()
     .sort((a, b) => String(a[sortBy.value]).localeCompare(String(b[sortBy.value]), 'zh'))
 })
@@ -81,21 +75,6 @@ async function onBatchQr() {
   if (action === 'zip') await exportQrZip(ok)
   else printQrSheet(ok)
   if (failed.length) ElMessage.warning(`${failed.length} 个生成失败，已跳过`)
-}
-async function onBatchDynasty() {
-  let value: string
-  try {
-    ({ value } = await ElMessageBox.prompt(
-      `为选中的 ${selected.value.length} 条展品统一设置朝代：`, '批量设置朝代',
-      { confirmButtonText: '确定', cancelButtonText: '取消' },
-    ))
-  } catch {
-    return // 用户取消
-  }
-  const res = await updateExhibitField(selected.value, 'dynasty', (value || '').trim())
-  ElMessage[res.failed.length ? 'warning' : 'success'](
-    `更新完成：成功 ${res.ok.length}${res.failed.length ? '，失败 ' + res.failed.length : ''}`)
-  await load()
 }
 
 // 二维码弹窗状态
@@ -217,9 +196,6 @@ onMounted(load)
 
     <div class="filter-bar">
       <el-input v-model="keyword" placeholder="搜索名称/编号" clearable style="width: 220px" />
-      <el-select v-model="dynastyFilter" placeholder="按朝代筛选" clearable style="width: 160px">
-        <el-option v-for="d in dynastyOptions" :key="d" :label="d" :value="d" />
-      </el-select>
       <el-select v-model="sortBy" style="width: 140px">
         <el-option label="按编号" value="exhibitId" />
         <el-option label="按名称" value="name" />
@@ -230,7 +206,6 @@ onMounted(load)
       <span>已选 {{ selected.length }} 项</span>
       <el-button type="danger" plain @click="onBatchDelete">批量删除</el-button>
       <el-button type="primary" plain @click="onBatchQr">批量导出二维码</el-button>
-      <el-button plain @click="onBatchDynasty">批量设置朝代</el-button>
     </div>
 
     <el-table :data="paged" v-loading="loading" border stripe empty-text="暂无展品" @selection-change="onSelectionChange">
@@ -248,7 +223,7 @@ onMounted(load)
       </el-table-column>
       <el-table-column prop="exhibitId" label="编号" width="140" />
       <el-table-column prop="name" label="名称" min-width="160" />
-      <el-table-column prop="dynasty" label="朝代" width="120" />
+      <el-table-column prop="summary" label="简述" min-width="160" show-overflow-tooltip />
       <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="goEdit(row)">编辑</el-button>

@@ -23,7 +23,7 @@
           <el-table-column prop="rowIndex" label="行" width="60" />
           <el-table-column prop="data.exhibitId" label="编号" width="140" />
           <el-table-column prop="data.name" label="名称" />
-          <el-table-column prop="data.dynasty" label="朝代" width="100" />
+          <el-table-column prop="data.summary" label="简述" min-width="140" show-overflow-tooltip />
           <el-table-column label="校验" width="240">
             <template #default="{ row }">
               <el-tag v-if="!row.errors.length" type="success">合法</el-tag>

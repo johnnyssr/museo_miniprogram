@@ -4,7 +4,7 @@ import { Exhibit } from '../models/exhibit'
 interface ExhibitDoc {
   exhibitId: string
   name: string
-  dynasty?: string
+  summary?: string
   image: string
   text: string
   audioUrl: string
@@ -16,7 +16,7 @@ function toExhibit(doc: ExhibitDoc): Exhibit {
   return {
     id: doc.exhibitId,
     name: doc.name,
-    dynasty: doc.dynasty,
+    summary: doc.summary,
     image: doc.image,
     text: doc.text,
     audioUrl: doc.audioUrl,

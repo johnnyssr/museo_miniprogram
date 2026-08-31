@@ -85,8 +85,8 @@ onMounted(load)
       <el-form-item label="名称" prop="name">
         <el-input v-model="model.name" placeholder="展品名称" />
       </el-form-item>
-      <el-form-item label="朝代">
-        <el-input v-model="model.dynasty" placeholder="如 唐代（选填）" />
+      <el-form-item label="简述">
+        <el-input v-model="model.summary" type="textarea" :rows="2" placeholder="一句话简述（选填）" />
       </el-form-item>
       <el-form-item label="文本描述">
         <el-input v-model="model.text" type="textarea" :rows="5" placeholder="展品介绍文字" />

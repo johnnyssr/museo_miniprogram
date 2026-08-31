@@ -1,7 +1,7 @@
 import Papa from 'papaparse'
 import type { Exhibit } from '../types/exhibit'
 
-export const CSV_HEADERS = ['exhibitId', 'name', 'dynasty', 'text', 'image', 'audioUrl', 'videoUrl'] as const
+export const CSV_HEADERS = ['exhibitId', 'name', 'summary', 'text', 'image', 'audioUrl', 'videoUrl'] as const
 
 export interface ParsedRow {
   data: Partial<Exhibit>
@@ -11,7 +11,7 @@ export interface ParsedRow {
 
 /** 生成模板 CSV 文本（含表头 + 一行示例） */
 export function buildTemplateCsv(): string {
-  const example = ['exhibit-001', '示例展品', '现代', '这里填文字介绍', 'https://…/pic.png', 'cloud://…/audio.mp3', '']
+  const example = ['exhibit-001', '示例展品', '一句话简述', '这里填文字介绍', 'https://…/pic.png', 'cloud://…/audio.mp3', '']
   return Papa.unparse([CSV_HEADERS as unknown as string[], example])
 }
 
@@ -27,7 +27,7 @@ export function parseAndValidate(text: string, existingIds: Set<string>): Parsed
     const data: Partial<Exhibit> = {
       exhibitId: (raw.exhibitId || '').trim(),
       name: (raw.name || '').trim(),
-      dynasty: (raw.dynasty || '').trim(),
+      summary: (raw.summary || '').trim(),
       text: (raw.text || '').trim(),
       image: (raw.image || '').trim(),
       audioUrl: (raw.audioUrl || '').trim(),

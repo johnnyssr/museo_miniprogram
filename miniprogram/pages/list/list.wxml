@@ -16,7 +16,7 @@
     <image class="thumb" src="{{item.image}}" mode="aspectFill" />
     <view class="card-body">
       <text class="card-name">{{item.name}}</text>
-      <text wx:if="{{item.dynasty}}" class="card-dynasty">{{item.dynasty}}</text>
+      <text wx:if="{{item.summary}}" class="card-summary">{{item.summary}}</text>
     </view>
     <view class="card-arrow">›</view>
   </view>

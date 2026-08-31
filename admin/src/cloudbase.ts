@@ -73,7 +73,7 @@ export async function fetchExhibitQRCode(
 
 const COLLECTION = 'exhibits'
 const WRITABLE_FIELDS: (keyof Exhibit)[] = [
-  'exhibitId', 'name', 'dynasty', 'image', 'text', 'audioUrl', 'videoUrl',
+  'exhibitId', 'name', 'summary', 'image', 'text', 'audioUrl', 'videoUrl',
 ]
 
 // 只保留白名单字段，避免把 _id 等写回或写入意外字段
@@ -124,13 +124,6 @@ export async function createExhibitsBatch(
   onProgress?: (d: number, t: number) => void,
 ): Promise<BatchResult<Partial<Exhibit>>> {
   return runBatch(rows, (r) => createExhibit(r as Exhibit).then(() => undefined), 5, onProgress)
-}
-
-export async function updateExhibitField(
-  items: Exhibit[], field: 'dynasty', value: string,
-  onProgress?: (d: number, t: number) => void,
-): Promise<BatchResult<Exhibit>> {
-  return runBatch(items, (e) => updateExhibit({ ...e, [field]: value }).then(() => undefined), 5, onProgress)
 }
 
 // ---- 云存储 ----

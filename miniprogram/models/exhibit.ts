@@ -1,7 +1,7 @@
 export interface Exhibit {
   id: string          // 页面/二维码使用的业务编号（由 service 层从 DB 的 exhibitId 映射而来）
   name: string        // 展品名称
-  dynasty?: string    // 年代（如「唐代」），可选
+  summary?: string    // 简述（一句话概括），可选
   image: string       // 展品图片地址，兼容 cloud:// 或 https://
   text: string        // 文字介绍
   audioUrl: string    // 语音地址，兼容 cloud:// 或 https://

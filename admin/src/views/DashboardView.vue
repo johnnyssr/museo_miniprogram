@@ -19,7 +19,7 @@
       <el-table :data="recent" size="small">
         <el-table-column prop="exhibitId" label="编号" width="140" />
         <el-table-column prop="name" label="名称" />
-        <el-table-column prop="dynasty" label="朝代" width="120" />
+        <el-table-column prop="summary" label="简述" min-width="160" show-overflow-tooltip />
       </el-table>
     </el-card>
   </div>

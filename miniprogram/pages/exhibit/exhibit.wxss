@@ -24,7 +24,7 @@
   font-weight: bold;
   color: #0d3a48;
 }
-.dynasty {
+.summary {
   margin-left: 16rpx;
   font-size: 26rpx;
   color: #0e88ab;
