@@ -11,6 +11,7 @@ import {
   fetchExhibitQRCode,
 } from '../cloudbase'
 import type { Exhibit } from '../types/exhibit'
+import { collectQrCodes, exportQrZip, printQrSheet } from '../utils/qrExport'
 
 const router = useRouter()
 const loading = ref(false)
@@ -64,7 +65,22 @@ async function onBatchDelete() {
   }
   await load()
 }
-function onBatchQr() {}
+async function onBatchQr() {
+  const action = await ElMessageBox.confirm(
+    `将为选中的 ${selected.value.length} 个展品生成二维码。选择输出方式：`,
+    '批量导出二维码',
+    { distinguishCancelAndClose: true, confirmButtonText: '打包下载ZIP', cancelButtonText: '打印标签页' },
+  ).then(() => 'zip').catch((a) => a === 'cancel' ? 'print' : 'abort')
+  if (action === 'abort') return
+
+  const loading = ElMessage({ message: '正在生成二维码…', duration: 0 })
+  const { ok, failed } = await collectQrCodes(selected.value)
+  loading.close()
+  if (!ok.length) { ElMessage.error('二维码生成全部失败'); return }
+  if (action === 'zip') await exportQrZip(ok)
+  else printQrSheet(ok)
+  if (failed.length) ElMessage.warning(`${failed.length} 个生成失败，已跳过`)
+}
 function onBatchDynasty() {}
 
 // 二维码弹窗状态
