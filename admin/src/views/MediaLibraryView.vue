@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadRawFile } from 'element-plus'
@@ -33,6 +33,7 @@ const filtered = computed(() =>
 )
 
 async function load() {
+  selected.value = []
   loading.value = true
   try {
     const [media, exs] = await Promise.all([fetchMedia(mediaType.value), fetchExhibits()])
@@ -80,8 +81,12 @@ function usageText(m: Media): string {
 }
 
 async function copyId(m: Media) {
-  await navigator.clipboard.writeText(m.fileID)
-  ElMessage.success('已复制 fileID')
+  try {
+    await navigator.clipboard.writeText(m.fileID)
+    ElMessage.success('已复制 fileID')
+  } catch {
+    ElMessage.error('复制失败，请手动复制')
+  }
 }
 
 async function confirmUsage(items: Media[]): Promise<boolean> {
@@ -143,7 +148,7 @@ function fmtSize(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
 
-onMounted(load)
+watch(mediaType, load, { immediate: true })
 </script>
 
 <template>
