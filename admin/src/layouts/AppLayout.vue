@@ -7,6 +7,12 @@
         <el-menu-item index="/dashboard"><el-icon><DataLine /></el-icon><span>数据概览</span></el-menu-item>
         <el-menu-item index="/exhibits"><el-icon><Files /></el-icon><span>展品管理</span></el-menu-item>
         <el-menu-item index="/import"><el-icon><Upload /></el-icon><span>批量导入</span></el-menu-item>
+        <el-sub-menu index="media">
+          <template #title><el-icon><PictureFilled /></el-icon><span>媒体库</span></template>
+          <el-menu-item index="/media/images">图片管理</el-menu-item>
+          <el-menu-item index="/media/videos">视频管理</el-menu-item>
+          <el-menu-item index="/media/audios">音频管理</el-menu-item>
+        </el-sub-menu>
       </el-menu>
       <div class="collapse-toggle" @click="collapsed = !collapsed">{{ collapsed ? '»' : '«' }}</div>
     </el-aside>
@@ -36,17 +42,22 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DataLine, Files, Upload } from '@element-plus/icons-vue'
+import { DataLine, Files, Upload, PictureFilled } from '@element-plus/icons-vue'
 import { logout } from '../cloudbase'
 
 const route = useRoute()
 const router = useRouter()
 const collapsed = ref(false)
-const activeMenu = computed(() => '/' + (route.path.split('/')[1] || 'dashboard'))
+const activeMenu = computed(() => route.path)
 const CRUMBS: Record<string, string> = {
-  dashboard: '数据概览', exhibits: '展品管理', import: '批量导入',
+  '/dashboard': '数据概览',
+  '/exhibits': '展品管理',
+  '/import': '批量导入',
+  '/media/images': '图片管理',
+  '/media/videos': '视频管理',
+  '/media/audios': '音频管理',
 }
-const crumb = computed(() => CRUMBS[route.path.split('/')[1]] || '展品管理')
+const crumb = computed(() => CRUMBS[route.path] || '展品管理')
 
 async function onCommand(cmd: string) {
   if (cmd === 'logout') { await logout(); router.push('/login') }

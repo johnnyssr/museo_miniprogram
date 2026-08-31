@@ -36,6 +36,24 @@ const router = createRouter({
       component: () => import('../views/ImportExhibitsView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/media/images',
+      name: 'media-images',
+      component: () => import('../views/MediaLibraryView.vue'),
+      meta: { requiresAuth: true, mediaType: 'image' },
+    },
+    {
+      path: '/media/videos',
+      name: 'media-videos',
+      component: () => import('../views/MediaLibraryView.vue'),
+      meta: { requiresAuth: true, mediaType: 'video' },
+    },
+    {
+      path: '/media/audios',
+      name: 'media-audios',
+      component: () => import('../views/MediaLibraryView.vue'),
+      meta: { requiresAuth: true, mediaType: 'audio' },
+    },
   ],
 })
 
