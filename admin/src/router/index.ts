@@ -30,6 +30,12 @@ const router = createRouter({
       component: () => import('../views/ExhibitEditView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/import',
+      name: 'import',
+      component: () => import('../views/ImportExhibitsView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

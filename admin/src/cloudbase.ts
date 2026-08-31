@@ -117,6 +117,13 @@ export async function deleteExhibitsBatch(
   return runBatch(items, (e) => deleteExhibit({ _id: e._id, exhibitId: e.exhibitId }), 5, onProgress)
 }
 
+export async function createExhibitsBatch(
+  rows: Partial<Exhibit>[],
+  onProgress?: (d: number, t: number) => void,
+): Promise<BatchResult<Partial<Exhibit>>> {
+  return runBatch(rows, (r) => createExhibit(r as Exhibit).then(() => undefined), 5, onProgress)
+}
+
 // ---- 云存储 ----
 
 /** 上传浏览器 File 到云存储，返回 cloud:// fileID。 */
