@@ -17,6 +17,8 @@ exports.main = async (event) => {
     return { exhibit: res.data.length > 0 ? res.data[0] : null }
   }
 
-  const res = await collection.limit(100).get()
+  // 云函数（admin SDK）单次上限 1000；后台的删除保护/文件名自动关联依赖完整展品列表，
+  // 若沿用默认 100，超过 100 个展品后会漏判「媒体是否被引用」，导致误删。
+  const res = await collection.limit(1000).get()
   return { list: res.data }
 }

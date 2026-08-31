@@ -1,0 +1,38 @@
+/* 海洋青蓝主题 · 唯一配色来源（清澈海蓝 A） */
+:root {
+  /* 品牌色板 */
+  --ocean-primary: #0e88ab;
+  --ocean-primary-dark: #0a6a86;
+  --ocean-primary-light: #33a6c6;
+  --ocean-primary-bg: #e0f2f7;
+  --ocean-accent: #f2a93c;
+  --ocean-text-strong: #0d3a48;
+  --ocean-text-body: #37535c;
+  --ocean-text-muted: #6a8f9c;
+  --ocean-text-hint: #9fc4d0;
+  --ocean-bg-page: #eef7fa;
+  --ocean-surface: #ffffff;
+  --ocean-border: #c4e2ec;
+  --ocean-placeholder: #d5eef4;
+  --ocean-success: #3fa66a;
+  --ocean-danger: #d9534f;
+  --ocean-shadow: rgba(13, 58, 72, 0.08);
+
+  /* 覆盖 Element Plus 主色 */
+  --el-color-primary: #0e88ab;
+  --el-color-primary-light-3: #56acc4;
+  --el-color-primary-light-5: #87c4d5;
+  --el-color-primary-light-7: #b7dbe6;
+  --el-color-primary-light-8: #cfe7ee;
+  --el-color-primary-light-9: #e0f2f7;
+  --el-color-primary-dark-2: #0a6a86;
+  --el-color-success: #3fa66a;
+  --el-color-warning: #f2a93c;
+  --el-color-danger: #d9534f;
+}
+
+body {
+  margin: 0;
+  background: var(--ocean-bg-page);
+  color: var(--ocean-text-body);
+}

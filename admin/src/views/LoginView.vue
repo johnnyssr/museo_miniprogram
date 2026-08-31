@@ -18,7 +18,7 @@ async function onSubmit() {
   loading.value = true
   try {
     await login(form.value.username, form.value.password)
-    const redirect = (route.query.redirect as string) || '/exhibits'
+    const redirect = (route.query.redirect as string) || '/dashboard'
     router.replace(redirect)
   } catch (err) {
     ElMessage.error(err instanceof Error ? err.message : '登录失败')
@@ -66,7 +66,7 @@ async function onSubmit() {
 .login-title {
   margin: 0 0 16px;
   text-align: center;
-  color: #3a2f22;
+  color: var(--ocean-text-strong);
 }
 .login-btn {
   width: 100%;

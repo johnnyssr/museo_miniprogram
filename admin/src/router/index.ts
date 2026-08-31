@@ -4,8 +4,14 @@ import { currentUserId } from '../cloudbase'
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/', redirect: '/exhibits' },
+    { path: '/', redirect: '/dashboard' },
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../views/DashboardView.vue'),
+      meta: { requiresAuth: true },
+    },
     {
       path: '/exhibits',
       name: 'exhibits',
@@ -23,6 +29,30 @@ const router = createRouter({
       name: 'exhibit-edit',
       component: () => import('../views/ExhibitEditView.vue'),
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/import',
+      name: 'import',
+      component: () => import('../views/ImportExhibitsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/media/images',
+      name: 'media-images',
+      component: () => import('../views/MediaLibraryView.vue'),
+      meta: { requiresAuth: true, mediaType: 'image' },
+    },
+    {
+      path: '/media/videos',
+      name: 'media-videos',
+      component: () => import('../views/MediaLibraryView.vue'),
+      meta: { requiresAuth: true, mediaType: 'video' },
+    },
+    {
+      path: '/media/audios',
+      name: 'media-audios',
+      component: () => import('../views/MediaLibraryView.vue'),
+      meta: { requiresAuth: true, mediaType: 'audio' },
     },
   ],
 })

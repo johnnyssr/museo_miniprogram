@@ -115,7 +115,7 @@ onMounted(load)
   margin: 0 auto;
 }
 .edit-title {
-  color: #3a2f22;
+  color: var(--ocean-text-strong);
   margin-bottom: 16px;
 }
 </style>

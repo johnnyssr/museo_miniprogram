@@ -6,9 +6,9 @@
     "pages/logs/logs"
   ],
   "window": {
-    "navigationBarTextStyle": "black",
+    "navigationBarTextStyle": "white",
     "navigationBarTitleText": "博物馆讲解",
-    "navigationBarBackgroundColor": "#ffffff"
+    "navigationBarBackgroundColor": "#0e88ab"
   },
   "style": "v2",
   "componentFramework": "glass-easel",

@@ -1,20 +1,102 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
 import {
   fetchExhibits,
   deleteExhibit,
-  logout,
+  deleteExhibitsBatch,
   toPreviewUrl,
   fetchExhibitQRCode,
+  updateExhibitField,
 } from '../cloudbase'
 import type { Exhibit } from '../types/exhibit'
+import { collectQrCodes, exportQrZip, printQrSheet } from '../utils/qrExport'
 
 const router = useRouter()
 const loading = ref(false)
 const rows = ref<Array<Exhibit & { _thumb?: string }>>([])
+
+// 列表筛选 / 排序 / 分页（数据量小，全部在已加载的 rows 上做客户端处理）
+const keyword = ref('')
+const dynastyFilter = ref('')
+const sortBy = ref<'exhibitId' | 'name'>('exhibitId')
+const page = ref(1)
+const pageSize = ref(20)
+
+const dynastyOptions = computed(() =>
+  Array.from(new Set(rows.value.map(e => e.dynasty).filter(Boolean))) as string[])
+
+const filtered = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  return rows.value
+    .filter(e => !kw || e.name.toLowerCase().includes(kw) || e.exhibitId.toLowerCase().includes(kw))
+    .filter(e => !dynastyFilter.value || e.dynasty === dynastyFilter.value)
+    .slice()
+    .sort((a, b) => String(a[sortBy.value]).localeCompare(String(b[sortBy.value]), 'zh'))
+})
+
+const paged = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filtered.value.slice(start, start + pageSize.value)
+})
+
+// 多选与批量操作（本任务只建骨架，实际功能在后续任务填充）
+const selected = ref<Exhibit[]>([])
+function onSelectionChange(sel: Exhibit[]) {
+  selected.value = sel
+}
+
+// 空实现，后续任务填充
+async function onBatchDelete() {
+  try {
+    await ElMessageBox.confirm(
+      `将删除选中的 ${selected.value.length} 条展品，删除后不可恢复。是否继续？`,
+      '批量删除确认', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    )
+  } catch {
+    return // 用户取消
+  }
+  const res = await deleteExhibitsBatch(selected.value)
+  if (res.failed.length) {
+    ElMessage.error(`删除完成：成功 ${res.ok.length}，失败 ${res.failed.length}。首个失败原因：${res.failed[0].error}`)
+  } else {
+    ElMessage.success(`已删除 ${res.ok.length} 条`)
+  }
+  await load()
+}
+async function onBatchQr() {
+  const action = await ElMessageBox.confirm(
+    `将为选中的 ${selected.value.length} 个展品生成二维码。选择输出方式：`,
+    '批量导出二维码',
+    { distinguishCancelAndClose: true, confirmButtonText: '打包下载ZIP', cancelButtonText: '打印标签页' },
+  ).then(() => 'zip').catch((a) => a === 'cancel' ? 'print' : 'abort')
+  if (action === 'abort') return
+
+  const loading = ElMessage({ message: '正在生成二维码…', duration: 0 })
+  const { ok, failed } = await collectQrCodes(selected.value)
+  loading.close()
+  if (!ok.length) { ElMessage.error('二维码生成全部失败'); return }
+  if (action === 'zip') await exportQrZip(ok)
+  else printQrSheet(ok)
+  if (failed.length) ElMessage.warning(`${failed.length} 个生成失败，已跳过`)
+}
+async function onBatchDynasty() {
+  let value: string
+  try {
+    ({ value } = await ElMessageBox.prompt(
+      `为选中的 ${selected.value.length} 条展品统一设置朝代：`, '批量设置朝代',
+      { confirmButtonText: '确定', cancelButtonText: '取消' },
+    ))
+  } catch {
+    return // 用户取消
+  }
+  const res = await updateExhibitField(selected.value, 'dynasty', (value || '').trim())
+  ElMessage[res.failed.length ? 'warning' : 'success'](
+    `更新完成：成功 ${res.ok.length}${res.failed.length ? '，失败 ' + res.failed.length : ''}`)
+  await load()
+}
 
 // 二维码弹窗状态
 const qrVisible = ref(false)
@@ -64,11 +146,6 @@ async function onDelete(row: Exhibit) {
   } catch (err) {
     ElMessage.error(err instanceof Error ? err.message : '删除失败')
   }
-}
-
-async function onLogout() {
-  await logout()
-  router.replace('/login')
 }
 
 // 打开二维码弹窗（默认普通二维码，当前阶段即可用）
@@ -135,11 +212,29 @@ onMounted(load)
       <el-button type="primary" @click="goNew">新增展品</el-button>
       <div class="toolbar-right">
         <el-button link @click="load">刷新</el-button>
-        <el-button link @click="onLogout">退出登录</el-button>
       </div>
     </div>
 
-    <el-table :data="rows" v-loading="loading" border stripe empty-text="暂无展品">
+    <div class="filter-bar">
+      <el-input v-model="keyword" placeholder="搜索名称/编号" clearable style="width: 220px" />
+      <el-select v-model="dynastyFilter" placeholder="按朝代筛选" clearable style="width: 160px">
+        <el-option v-for="d in dynastyOptions" :key="d" :label="d" :value="d" />
+      </el-select>
+      <el-select v-model="sortBy" style="width: 140px">
+        <el-option label="按编号" value="exhibitId" />
+        <el-option label="按名称" value="name" />
+      </el-select>
+    </div>
+
+    <div v-if="selected.length" class="batch-bar">
+      <span>已选 {{ selected.length }} 项</span>
+      <el-button type="danger" plain @click="onBatchDelete">批量删除</el-button>
+      <el-button type="primary" plain @click="onBatchQr">批量导出二维码</el-button>
+      <el-button plain @click="onBatchDynasty">批量设置朝代</el-button>
+    </div>
+
+    <el-table :data="paged" v-loading="loading" border stripe empty-text="暂无展品" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="48" />
       <el-table-column label="图片" width="90">
         <template #default="{ row }">
           <el-image
@@ -162,6 +257,17 @@ onMounted(load)
         </template>
       </el-table-column>
     </el-table>
+
+    <el-pagination
+      class="pager"
+      layout="total, prev, pager, next, sizes"
+      :total="filtered.length"
+      :page-size="pageSize"
+      :current-page="page"
+      :page-sizes="[10, 20, 50, 100]"
+      @current-change="page = $event"
+      @size-change="pageSize = $event; page = 1"
+    />
 
     <el-dialog v-model="qrVisible" title="展品二维码" width="360">
       <div v-if="qrTarget" class="qr-body">
@@ -210,8 +316,27 @@ onMounted(load)
   align-items: center;
   margin-bottom: 16px;
 }
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--ocean-primary-bg);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.pager {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
 .muted {
-  color: #8a7d6a;
+  color: var(--ocean-text-muted);
 }
 .qr-body {
   display: flex;
@@ -222,7 +347,7 @@ onMounted(load)
 .qr-meta {
   margin: 0;
   font-weight: 600;
-  color: #3a2f22;
+  color: var(--ocean-text-strong);
 }
 .qr-canvas {
   display: flex;
