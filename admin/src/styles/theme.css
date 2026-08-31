@@ -1,0 +1,37 @@
+/* 海洋青蓝主题 · 唯一配色来源 */
+:root {
+  /* 品牌色板 */
+  --ocean-primary: #1f6f78;
+  --ocean-primary-dark: #155159;
+  --ocean-primary-light: #2a8a95;
+  --ocean-primary-bg: #e6f2f2;
+  --ocean-accent: #e2a13b;
+  --ocean-text-strong: #183b40;
+  --ocean-text-body: #3d5257;
+  --ocean-text-muted: #7a9196;
+  --ocean-text-hint: #a9bcc0;
+  --ocean-bg-page: #f2f7f7;
+  --ocean-surface: #ffffff;
+  --ocean-border: #cfe1e2;
+  --ocean-placeholder: #e0efee;
+  --ocean-success: #3fa66a;
+  --ocean-danger: #d9534f;
+  --ocean-shadow: rgba(24, 59, 64, 0.08);
+
+  /* 覆盖 Element Plus 主色 */
+  --el-color-primary: #1f6f78;
+  --el-color-primary-light-3: #4a8f97;
+  --el-color-primary-light-5: #77abb1;
+  --el-color-primary-light-7: #a5c7cb;
+  --el-color-primary-light-8: #bcd6d9;
+  --el-color-primary-light-9: #e6f2f2;
+  --el-color-primary-dark-2: #155159;
+  --el-color-success: #3fa66a;
+  --el-color-warning: #e2a13b;
+  --el-color-danger: #d9534f;
+}
+
+body {
+  background: var(--ocean-bg-page);
+  color: var(--ocean-text-body);
+}
