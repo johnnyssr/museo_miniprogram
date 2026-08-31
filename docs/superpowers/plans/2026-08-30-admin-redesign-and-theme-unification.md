@@ -114,14 +114,26 @@ git commit -m "feat(admin): 引入海洋青蓝主题色板并覆盖 Element Plus
 
 ---
 
-### Task 2: 清理 App.vue 内联棕色，改用主题变量
+### Task 2: 清理全部后台组件内联棕色，改用主题变量
 
 **Files:**
-- Modify: `admin/src/App.vue`
+- Modify: `admin/src/App.vue`、`admin/src/views/ExhibitListView.vue`、`admin/src/views/ExhibitEditView.vue`、`admin/src/views/LoginView.vue`、`admin/src/components/MediaField.vue`（凡 `<style>` 中含旧棕色 hex 者）
 
-- [ ] **Step 1: 替换 `App.vue` `<style>` 中的棕色 hex**
+- [ ] **Step 1: 先定位所有残留棕色**
 
-将 header 相关样式改为使用变量。把 `background:#8a6d3b` 改为 `background: var(--ocean-primary)`；标题深棕 `#3a2f22`→`var(--ocean-text-strong)`；muted `#8a7d6a`→`var(--ocean-text-muted)`。示例（按实际选择器调整）：
+Run: `grep -rnE "#8a6d3b|#3a2f22|#8a7d6a|#5a5145|#b0a692|#d8c9ad|#c9bda6|#eee7d9" admin/src/`
+（忽略 `admin/src/styles/theme.css` 中的映射注释命中。）逐处替换为对应主题变量：
+
+- `#8a6d3b`（主强调）→ `var(--ocean-primary)`
+- `#3a2f22`（主标题）→ `var(--ocean-text-strong)`
+- `#8a7d6a`（次要文字）→ `var(--ocean-text-muted)`
+- `#5a5145`（正文）→ `var(--ocean-text-body)`
+- `#b0a692`（提示）→ `var(--ocean-text-hint)`
+- `#d8c9ad`（边框）→ `var(--ocean-border)`
+- `#c9bda6`（箭头）→ `var(--ocean-text-hint)`
+- `#eee7d9`（占位底）→ `var(--ocean-placeholder)`
+
+`App.vue` header 示例：
 
 ```css
 .app-header {
@@ -133,9 +145,11 @@ git commit -m "feat(admin): 引入海洋青蓝主题色板并覆盖 Element Plus
 .app-title { font-size: 18px; font-weight: 600; }
 ```
 
-- [ ] **Step 2: grep 确认无残留棕色**
+`ExhibitListView.vue` 已知含 `.muted { color:#8a7d6a }`、`.qr-meta { color:#3a2f22 }`，一并替换。
 
-Run: `grep -nE "#8a6d3b|#3a2f22|#8a7d6a|#b0a692|#d8c9ad|#c9bda6|#eee7d9" admin/src/App.vue`
+- [ ] **Step 2: grep 确认无残留棕色（排除 theme.css 注释）**
+
+Run: `grep -rnE "#8a6d3b|#3a2f22|#8a7d6a|#5a5145|#b0a692|#d8c9ad|#c9bda6|#eee7d9" admin/src/ | grep -v "styles/theme.css"`
 Expected: 无输出。
 
 - [ ] **Step 3: 构建验证**
@@ -146,8 +160,8 @@ Expected: 成功。
 - [ ] **Step 4: Commit**
 
 ```bash
-git add admin/src/App.vue
-git commit -m "refactor(admin): App.vue 改用主题变量替代内联棕色"
+git add -A admin/src
+git commit -m "refactor(admin): 全部组件改用主题变量替代内联棕色"
 ```
 
 ---
@@ -159,6 +173,12 @@ git commit -m "refactor(admin): App.vue 改用主题变量替代内联棕色"
 **Files:**
 - Create: `admin/src/layouts/AppLayout.vue`
 - Modify: `admin/src/App.vue`
+- Modify: `admin/package.json`（新增 `@element-plus/icons-vue`）
+
+- [ ] **Step 0: 安装图标库（当前未安装）**
+
+Run: `cd admin && npm install @element-plus/icons-vue`
+Expected: 依赖写入 `package.json`。
 
 - [ ] **Step 1: 创建 `admin/src/layouts/AppLayout.vue`**
 
@@ -400,7 +420,7 @@ git commit -m "feat(admin): 新增数据概览页并设为登录后默认页"
 
 - [ ] **Step 1: 在 `ExhibitListView.vue` 顶部工具区加入筛选栏**
 
-在现有 `新增展品 / 刷新` 工具栏下方新增筛选行（保留原有列表加载逻辑，`allItems` 为完整数据源）：
+现有工具栏为「新增展品（左） / 刷新 · 退出登录（右）」。因「退出登录」已在 AppLayout 顶栏下拉中提供，此处**移除冗余的「退出登录」按钮**（保留「刷新」），并删除随之不再使用的 `onLogout` 处理函数与相关未用 import。然后在工具栏下方新增筛选行（保留原有列表加载逻辑，数据源为现有的 `rows` ref —— 它保存全部已加载展品，通过现有 `load()` 函数加载）：
 
 ```vue
 <div class="filter-bar">
@@ -425,13 +445,13 @@ const sortBy = ref<'exhibitId' | 'name'>('exhibitId')
 const page = ref(1)
 const pageSize = ref(20)
 
-// allItems 为已加载的完整列表（沿用现有加载逻辑赋值）
+// rows 为已加载的完整列表（沿用现有 load() 赋值，元素为 Exhibit & { _thumb? }）
 const dynastyOptions = computed(() =>
-  Array.from(new Set(allItems.value.map(e => e.dynasty).filter(Boolean))) as string[])
+  Array.from(new Set(rows.value.map(e => e.dynasty).filter(Boolean))) as string[])
 
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
-  return allItems.value
+  return rows.value
     .filter(e => !kw || e.name.toLowerCase().includes(kw) || e.exhibitId.toLowerCase().includes(kw))
     .filter(e => !dynastyFilter.value || e.dynasty === dynastyFilter.value)
     .slice()
@@ -444,7 +464,7 @@ const paged = computed(() => {
 })
 ```
 
-将 `el-table` 的 `:data` 由原数据源改为 `paged`。
+将 `el-table` 的 `:data` 由 `rows` 改为 `paged`。
 
 - [ ] **Step 3: 表格下方加入分页器**
 
