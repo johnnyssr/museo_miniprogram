@@ -1,12 +1,12 @@
-/* 海洋青蓝主题 · 色值约定（各页 .wxss 按此表替换）
-   primary        #1f6f78   主色：按钮/链接/标签/箭头
-   text-strong    #183b40   主标题
-   text-body      #3d5257   正文
-   text-muted     #7a9196   次要文字/空状态
-   text-hint      #a9bcc0   提示/箭头
-   bg-page        #f2f7f7   页面背景
-   border         #cfe1e2   边框
-   placeholder    #e0efee   占位底
-   shadow         rgba(24,59,64,0.08) 卡片阴影
+/* 海洋青蓝主题 · 色值约定（清澈海蓝 A，各页 .wxss 按此表替换）
+   primary        #0e88ab   主色：按钮/链接/标签/箭头
+   text-strong    #0d3a48   主标题
+   text-body      #37535c   正文
+   text-muted     #6a8f9c   次要文字/空状态
+   text-hint      #9fc4d0   提示/箭头
+   bg-page        #eef7fa   页面背景
+   border         #c4e2ec   边框
+   placeholder    #d5eef4   占位底
+   shadow         rgba(13,58,72,0.08) 卡片阴影
 */
-page { background: #f2f7f7; color: #3d5257; }
+page { background: #eef7fa; color: #37535c; }

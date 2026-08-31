@@ -3,7 +3,7 @@
     <el-aside :width="collapsed ? '64px' : '208px'" class="shell-aside">
       <div class="brand">🌊 <span v-show="!collapsed">运维后台</span></div>
       <el-menu :collapse="collapsed" :default-active="activeMenu" router
-               background-color="transparent" text-color="#dbeeef" active-text-color="#fff">
+               background-color="transparent" text-color="#d4edf5" active-text-color="#fff">
         <el-menu-item index="/dashboard"><el-icon><DataLine /></el-icon><span>数据概览</span></el-menu-item>
         <el-menu-item index="/exhibits"><el-icon><Files /></el-icon><span>展品管理</span></el-menu-item>
         <el-menu-item index="/import"><el-icon><Upload /></el-icon><span>批量导入</span></el-menu-item>
@@ -57,11 +57,11 @@ async function onCommand(cmd: string) {
 .admin-shell { height: 100vh; }
 .shell-aside {
   background: var(--ocean-primary-dark);
-  color: #dbeeef; display: flex; flex-direction: column; position: relative;
+  color: #d4edf5; display: flex; flex-direction: column; position: relative;
 }
 .brand { height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 18px; font-weight: 600; color: #fff; }
 .shell-aside .el-menu { border-right: none; }
-.collapse-toggle { margin-top: auto; padding: 12px 18px; cursor: pointer; color: #a9c9cc; }
+.collapse-toggle { margin-top: auto; padding: 12px 18px; cursor: pointer; color: #8fbfce; }
 .shell-header {
   display: flex; align-items: center; justify-content: space-between;
   background: var(--ocean-primary); color: #fff;

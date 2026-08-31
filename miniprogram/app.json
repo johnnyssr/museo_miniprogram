@@ -8,7 +8,7 @@
   "window": {
     "navigationBarTextStyle": "white",
     "navigationBarTitleText": "博物馆讲解",
-    "navigationBarBackgroundColor": "#1f6f78"
+    "navigationBarBackgroundColor": "#0e88ab"
   },
   "style": "v2",
   "componentFramework": "glass-easel",

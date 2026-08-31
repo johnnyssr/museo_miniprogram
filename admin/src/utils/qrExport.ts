@@ -42,10 +42,10 @@ export function printQrSheet(items: QrItem[]): void {
     <style>
       body { font-family: sans-serif; }
       .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 16px; }
-      .cell { border: 1px solid #cfe1e2; border-radius: 8px; padding: 10px; text-align: center; }
+      .cell { border: 1px solid #c4e2ec; border-radius: 8px; padding: 10px; text-align: center; }
       .cell img { width: 120px; height: 120px; }
-      .id { color: #1f6f78; font-weight: 600; margin-top: 6px; }
-      .name { color: #183b40; font-size: 13px; }
+      .id { color: #0e88ab; font-weight: 600; margin-top: 6px; }
+      .name { color: #0d3a48; font-size: 13px; }
       @media print { .cell { break-inside: avoid; } }
     </style></head>
     <body><div class="grid">${cells}</div>
