@@ -5,6 +5,7 @@ interface ExhibitDoc {
   exhibitId: string
   name: string
   summary?: string
+  category?: string
   images?: string[]
   image?: string
   text: string
@@ -21,6 +22,7 @@ function toExhibit(doc: ExhibitDoc): Exhibit {
     id: doc.exhibitId,
     name: doc.name,
     summary: doc.summary,
+    category: doc.category,
     images,
     image: images[0] || '',
     text: doc.text,

@@ -74,7 +74,7 @@ export async function fetchExhibitQRCode(
 
 const COLLECTION = 'exhibits'
 const WRITABLE_FIELDS: (keyof Exhibit)[] = [
-  'exhibitId', 'name', 'summary', 'images', 'image', 'text', 'audioUrl', 'videoUrl',
+  'exhibitId', 'name', 'summary', 'category', 'images', 'image', 'text', 'audioUrl', 'videoUrl',
 ]
 
 // 只保留白名单字段，避免把 _id 等写回或写入意外字段
