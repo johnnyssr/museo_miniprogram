@@ -4,8 +4,14 @@ import { currentUserId } from '../cloudbase'
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/', redirect: '/exhibits' },
+    { path: '/', redirect: '/dashboard' },
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../views/DashboardView.vue'),
+      meta: { requiresAuth: true },
+    },
     {
       path: '/exhibits',
       name: 'exhibits',

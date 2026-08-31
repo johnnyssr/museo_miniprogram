@@ -18,7 +18,7 @@ async function onSubmit() {
   loading.value = true
   try {
     await login(form.value.username, form.value.password)
-    const redirect = (route.query.redirect as string) || '/exhibits'
+    const redirect = (route.query.redirect as string) || '/dashboard'
     router.replace(redirect)
   } catch (err) {
     ElMessage.error(err instanceof Error ? err.message : '登录失败')
