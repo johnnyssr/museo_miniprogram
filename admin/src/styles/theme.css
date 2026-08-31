@@ -32,6 +32,7 @@
 }
 
 body {
+  margin: 0;
   background: var(--ocean-bg-page);
   color: var(--ocean-text-body);
 }
