@@ -6,6 +6,7 @@ import { runBatch } from '../utils/batch'
 import { buildMatchPlan, type MatchPlanRow } from '../utils/mediaMatch'
 import type { Media } from '../types/media'
 import type { Exhibit } from '../types/exhibit'
+import { exhibitImages } from '../types/exhibit'
 
 const props = defineProps<{
   modelValue: boolean
@@ -19,7 +20,7 @@ const checked = ref<Record<string, boolean>>({})
 const applying = ref(false)
 
 const STATUS_TEXT: Record<MatchPlanRow['status'], string> = {
-  ok: '可关联', unmatched: '未匹配，跳过', occupied: '已有值（勾选覆盖）',
+  ok: '可关联', unmatched: '未匹配，跳过', occupied: '已存在，跳过',
 }
 
 function rebuild() {
@@ -43,14 +44,43 @@ async function apply() {
   if (!targets.length) { ElMessage.info('没有勾选任何可关联项'); return }
   applying.value = true
   try {
-    const res = await runBatch(targets, async (r) => {
-      await updateExhibit({ _id: (r.exhibit as Exhibit)._id, [r.field as string]: r.media.fileID } as unknown as Exhibit)
-    }, 5)
+    // 每个展品一个写入任务，避免并发互相覆盖：
+    //  - 图片：把匹配到该展品的多张按序号追加进 images（去重）
+    //  - 音/视频：写入对应单值字段
+    const jobs: Array<() => Promise<void>> = []
+
+    for (const r of targets.filter((t) => t.field !== 'image')) {
+      const ex = r.exhibit as Exhibit
+      jobs.push(async () => {
+        await updateExhibit({ _id: ex._id, [r.field as string]: r.media.fileID } as unknown as Exhibit)
+      })
+    }
+
+    const imageByExhibit = new Map<string, { exhibit: Exhibit; rows: MatchPlanRow[] }>()
+    for (const r of targets.filter((t) => t.field === 'image')) {
+      const ex = r.exhibit as Exhibit
+      const key = ex._id as string
+      if (!imageByExhibit.has(key)) imageByExhibit.set(key, { exhibit: ex, rows: [] })
+      imageByExhibit.get(key)!.rows.push(r)
+    }
+    for (const g of imageByExhibit.values()) {
+      jobs.push(async () => {
+        const existing = exhibitImages(g.exhibit)
+        const additions = g.rows
+          .slice()
+          .sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0))
+          .map((r) => r.media.fileID)
+          .filter((id) => !existing.includes(id))
+        await updateExhibit({ _id: g.exhibit._id, images: [...existing, ...additions] } as unknown as Exhibit)
+      })
+    }
+
+    const res = await runBatch(jobs, (job) => job(), 5)
     const skipped = rows.value.length - targets.length
     if (res.failed.length) {
-      ElMessage.warning(`关联完成：成功 ${res.ok.length}，失败 ${res.failed.length}（${res.failed[0].error}），跳过 ${skipped}`)
+      ElMessage.warning(`关联完成：${res.failed.length} 个写入失败（${res.failed[0].error}），跳过 ${skipped}`)
     } else {
-      ElMessage.success(`成功关联 ${res.ok.length}，跳过 ${skipped}`)
+      ElMessage.success(`成功关联 ${targets.length} 个文件，跳过 ${skipped}`)
     }
     emit('applied')
     emit('update:modelValue', false)
@@ -67,7 +97,9 @@ function close() { emit('update:modelValue', false) }
     :model-value="modelValue" title="按文件名关联展品" width="720px"
     @update:model-value="close"
   >
-    <p class="hint">文件名（去扩展名）= 展品编号即可自动匹配；已有值默认跳过，需勾选「覆盖」。</p>
+    <p class="hint">
+      文件名（去扩展名）= 展品编号即可自动匹配。图片支持「编号-序号」（如 exhibit-001、exhibit-001-2）按序号追加进图集；音/视频写入对应字段。已存在的默认跳过。
+    </p>
     <el-table :data="rows" max-height="420">
       <el-table-column width="52">
         <template #default="{ row }">

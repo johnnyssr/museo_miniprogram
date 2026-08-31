@@ -1,6 +1,7 @@
 import cloudbase from '@cloudbase/js-sdk'
 import { CLOUD_ENV, CLOUD_REGION, CLOUD_ACCESS_KEY } from './config'
 import type { Exhibit } from './types/exhibit'
+import { exhibitImages } from './types/exhibit'
 import { runBatch, type BatchResult } from './utils/batch'
 import type { Media, MediaType } from './types/media'
 import { inferMediaType } from './types/media'
@@ -73,7 +74,7 @@ export async function fetchExhibitQRCode(
 
 const COLLECTION = 'exhibits'
 const WRITABLE_FIELDS: (keyof Exhibit)[] = [
-  'exhibitId', 'name', 'summary', 'image', 'text', 'audioUrl', 'videoUrl',
+  'exhibitId', 'name', 'summary', 'images', 'image', 'text', 'audioUrl', 'videoUrl',
 ]
 
 // 只保留白名单字段，避免把 _id 等写回或写入意外字段
@@ -81,6 +82,15 @@ function pickFields(input: Partial<Exhibit>): Record<string, unknown> {
   const doc: Record<string, unknown> = {}
   for (const key of WRITABLE_FIELDS) {
     if (input[key] !== undefined) doc[key] = input[key]
+  }
+  // 图集归一化：以 images 为准，image 同步为封面（首张），兼容旧端 / 旧数据。
+  if (doc.images !== undefined || doc.image !== undefined) {
+    const images = exhibitImages({
+      images: doc.images as string[] | undefined,
+      image: doc.image as string | undefined,
+    })
+    doc.images = images
+    doc.image = images[0] || ''
   }
   return doc
 }

@@ -11,6 +11,7 @@ import {
   fetchExhibitQRCode,
 } from '../cloudbase'
 import type { Exhibit } from '../types/exhibit'
+import { exhibitImages } from '../types/exhibit'
 import { collectQrCodes, exportQrZip, printQrSheet } from '../utils/qrExport'
 
 const router = useRouter()
@@ -89,9 +90,9 @@ async function load() {
   loading.value = true
   try {
     const list = await fetchExhibits()
-    // 逐条把 cloud:// 缩略图换成可预览的临时 URL
+    // 逐条把封面（图集第一张）的 cloud:// 换成可预览的临时 URL
     rows.value = await Promise.all(
-      list.map(async (e) => ({ ...e, _thumb: await toPreviewUrl(e.image) })),
+      list.map(async (e) => ({ ...e, _thumb: await toPreviewUrl(exhibitImages(e)[0] || '') })),
     )
   } catch (err) {
     ElMessage.error(err instanceof Error ? err.message : '加载失败')

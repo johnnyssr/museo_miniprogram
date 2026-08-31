@@ -46,6 +46,13 @@ Component({
       this.setData({ audioExpanded: !this.data.audioExpanded })
     },
 
+    // 点击封面图全屏预览（支持缩放、左右切换）
+    onPreviewImage(e: WechatMiniprogram.TouchEvent) {
+      const current = e.currentTarget.dataset.src as string
+      const urls = this.data.exhibit?.images || []
+      if (urls.length) wx.previewImage({ current, urls })
+    },
+
     // 播放/暂停语音
     toggleAudioPlay() {
       const exhibit = this.data.exhibit

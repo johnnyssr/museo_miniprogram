@@ -4,8 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { fetchExhibits, createExhibit, updateExhibit } from '../cloudbase'
-import { emptyExhibit, type Exhibit } from '../types/exhibit'
+import { emptyExhibit, exhibitImages, type Exhibit } from '../types/exhibit'
 import MediaField from '../components/MediaField.vue'
+import MultiImageField from '../components/MultiImageField.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,6 +37,8 @@ async function load() {
       return
     }
     model.value = { ...emptyExhibit(), ...found }
+    // 归一化图集：旧数据只有单 image 时，转成 images 数组供多图编辑器显示
+    model.value.images = exhibitImages(found)
   } catch (err) {
     ElMessage.error(err instanceof Error ? err.message : '加载失败')
   } finally {
@@ -92,7 +95,7 @@ onMounted(load)
         <el-input v-model="model.text" type="textarea" :rows="5" placeholder="展品介绍文字" />
       </el-form-item>
       <el-form-item label="图片">
-        <MediaField v-model="model.image" kind="image" label="图片" />
+        <MultiImageField v-model="model.images" />
       </el-form-item>
       <el-form-item label="音频">
         <MediaField v-model="model.audioUrl" kind="audio" label="音频" />

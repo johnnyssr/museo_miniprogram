@@ -1,12 +1,18 @@
 import type { Exhibit } from '../types/exhibit'
+import { exhibitImages } from '../types/exhibit'
 
-// 展品里可能引用媒体的三个字段
-const REF_FIELDS: (keyof Exhibit)[] = ['image', 'audioUrl', 'videoUrl']
+// 展品里可能引用媒体的单值字段（图集 images 另行展开处理）
+const SINGLE_REF_FIELDS: (keyof Exhibit)[] = ['audioUrl', 'videoUrl']
 
-/** 返回引用了该 fileID 的展品列表（任意字段命中即算）。 */
+/** 某展品引用的全部 fileID（展开图集 + 单值字段）。 */
+function refsOf(e: Exhibit): string[] {
+  return [...exhibitImages(e), ...SINGLE_REF_FIELDS.map((f) => e[f] as string)].filter(Boolean)
+}
+
+/** 返回引用了该 fileID 的展品列表（任意字段/图集命中即算）。 */
 export function usedByExhibits(fileID: string, exhibits: Exhibit[]): Exhibit[] {
   if (!fileID) return []
-  return exhibits.filter((e) => REF_FIELDS.some((f) => e[f] === fileID))
+  return exhibits.filter((e) => refsOf(e).includes(fileID))
 }
 
 /** 引用该 fileID 的展品数量。 */

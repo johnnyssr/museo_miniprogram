@@ -9,7 +9,7 @@
 
     <div class="step-body">
       <el-alert type="info" :closable="false"
-        title="媒体文件说明：图片/音频/视频列只能填写已有的 https:// 或 cloud:// 链接，导入不会上传本地文件。" />
+        title="媒体文件说明：图片/音频/视频列只能填写已有的 https:// 或 cloud:// 链接，导入不会上传本地文件。图片列可填多张，用「|」分隔（第一张为封面）。" />
 
       <div v-if="step <= 1" class="actions">
         <el-button type="primary" @click="downloadTemplate">下载 CSV 模板</el-button>

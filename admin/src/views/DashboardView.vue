@@ -29,6 +29,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { fetchExhibits } from '../cloudbase'
 import type { Exhibit } from '../types/exhibit'
+import { exhibitImages } from '../types/exhibit'
 
 const loading = ref(false)
 const items = ref<Exhibit[]>([])
@@ -41,11 +42,12 @@ onMounted(async () => {
 const stats = computed(() => {
   const list = items.value
   const withMedia = (k: keyof Exhibit) => list.filter(e => !!e[k]).length
+  const withImage = list.filter(e => exhibitImages(e).length > 0).length
   const total = list.length
-  const complete = list.filter(e => e.image && e.audioUrl && e.text).length
+  const complete = list.filter(e => exhibitImages(e).length > 0 && e.audioUrl && e.text).length
   return [
     { label: '展品总数', value: total },
-    { label: '含图片', value: withMedia('image') },
+    { label: '含图片', value: withImage },
     { label: '含音频', value: withMedia('audioUrl') },
     { label: '含视频', value: withMedia('videoUrl') },
     { label: '媒体完整度', value: total ? Math.round((complete / total) * 100) + '%' : '—' },

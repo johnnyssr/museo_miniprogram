@@ -5,7 +5,8 @@ interface ExhibitDoc {
   exhibitId: string
   name: string
   summary?: string
-  image: string
+  images?: string[]
+  image?: string
   text: string
   audioUrl: string
   videoUrl: string
@@ -13,11 +14,15 @@ interface ExhibitDoc {
 
 /** 把 DB 文档映射为页面用的 Exhibit（exhibitId → id） */
 function toExhibit(doc: ExhibitDoc): Exhibit {
+  // 归一化图集：优先 images，回退旧的单 image；过滤空值。旧数据零迁移即可显示。
+  const raw = doc.images && doc.images.length ? doc.images : doc.image ? [doc.image] : []
+  const images = raw.map((u) => (u || '').trim()).filter(Boolean)
   return {
     id: doc.exhibitId,
     name: doc.name,
     summary: doc.summary,
-    image: doc.image,
+    images,
+    image: images[0] || '',
     text: doc.text,
     audioUrl: doc.audioUrl,
     videoUrl: doc.videoUrl,

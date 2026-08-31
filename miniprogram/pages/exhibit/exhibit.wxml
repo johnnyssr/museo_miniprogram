@@ -4,7 +4,18 @@
 </view>
 
 <scroll-view wx:elif="{{exhibit}}" scroll-y class="page">
-  <image class="cover" src="{{exhibit.image}}" mode="aspectFill" />
+  <swiper
+    wx:if="{{exhibit.images.length}}"
+    class="cover-swiper"
+    indicator-dots="{{exhibit.images.length > 1}}"
+    indicator-color="rgba(255,255,255,0.5)"
+    indicator-active-color="#ffffff"
+    circular="{{exhibit.images.length > 1}}"
+  >
+    <swiper-item wx:for="{{exhibit.images}}" wx:key="*this">
+      <image class="cover" src="{{item}}" mode="aspectFill" data-src="{{item}}" bindtap="onPreviewImage" />
+    </swiper-item>
+  </swiper>
   <view class="header">
     <text class="name">{{exhibit.name}}</text>
     <text wx:if="{{exhibit.summary}}" class="summary">{{exhibit.summary}}</text>
