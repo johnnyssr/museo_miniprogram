@@ -1,20 +1,20 @@
 /**list.wxss**/
 .page {
   height: 100vh;
-  background: #f5f3ee;
+  background: #f2f7f7;
   box-sizing: border-box;
 }
 .page-title {
   font-size: 40rpx;
   font-weight: bold;
-  color: #3a2f22;
+  color: #183b40;
   padding: 40rpx 30rpx 20rpx;
 }
 .empty {
   display: flex;
   justify-content: center;
   padding: 120rpx 0;
-  color: #8a7d6a;
+  color: #7a9196;
   font-size: 30rpx;
 }
 .card {
@@ -24,14 +24,14 @@
   padding: 24rpx;
   background: #fff;
   border-radius: 20rpx;
-  box-shadow: 0 6rpx 24rpx rgba(58, 47, 34, 0.06);
+  box-shadow: 0 6rpx 24rpx rgba(24, 59, 64, 0.08);
 }
 .thumb {
   width: 140rpx;
   height: 140rpx;
   border-radius: 16rpx;
   flex-shrink: 0;
-  background: #eee7d9;
+  background: #e0efee;
 }
 .card-body {
   flex: 1;
@@ -42,15 +42,15 @@
 .card-name {
   font-size: 34rpx;
   font-weight: bold;
-  color: #3a2f22;
+  color: #183b40;
 }
 .card-dynasty {
   margin-top: 10rpx;
   font-size: 26rpx;
-  color: #8a6d3b;
+  color: #1f6f78;
 }
 .card-arrow {
   font-size: 44rpx;
-  color: #c9bda6;
+  color: #a9bcc0;
   padding-left: 12rpx;
 }
