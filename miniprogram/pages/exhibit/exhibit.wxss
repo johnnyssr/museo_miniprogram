@@ -1,14 +1,14 @@
 /**exhibit.wxss**/
 .page {
   height: 100vh;
-  background: #f5f3ee;
+  background: #f2f7f7;
 }
 .empty {
   display: flex;
   height: 100vh;
   align-items: center;
   justify-content: center;
-  color: #8a7d6a;
+  color: #7a9196;
   font-size: 30rpx;
 }
 .cover {
@@ -22,12 +22,12 @@
 .name {
   font-size: 40rpx;
   font-weight: bold;
-  color: #3a2f22;
+  color: #183b40;
 }
 .dynasty {
   margin-left: 16rpx;
   font-size: 26rpx;
-  color: #8a6d3b;
+  color: #1f6f78;
 }
 .section {
   margin: 20rpx;
@@ -38,13 +38,13 @@
 .section-title {
   font-size: 30rpx;
   font-weight: bold;
-  color: #3a2f22;
+  color: #183b40;
   margin-bottom: 16rpx;
 }
 .text {
   font-size: 28rpx;
   line-height: 1.7;
-  color: #5a5145;
+  color: #3d5257;
 }
 .block {
   margin: 20rpx;
@@ -58,18 +58,18 @@
   padding: 30rpx;
   font-size: 30rpx;
   font-weight: bold;
-  color: #3a2f22;
+  color: #183b40;
 }
 .arrow {
   font-size: 26rpx;
-  color: #8a6d3b;
+  color: #1f6f78;
   font-weight: normal;
 }
 .block-body {
   padding: 0 30rpx 30rpx;
 }
 .play-btn {
-  background: #8a6d3b;
+  background: #1f6f78;
   color: #fff;
   border-radius: 40rpx;
   font-size: 28rpx;
