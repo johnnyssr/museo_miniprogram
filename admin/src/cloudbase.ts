@@ -2,6 +2,8 @@ import cloudbase from '@cloudbase/js-sdk'
 import { CLOUD_ENV, CLOUD_REGION, CLOUD_ACCESS_KEY } from './config'
 import type { Exhibit } from './types/exhibit'
 import { runBatch, type BatchResult } from './utils/batch'
+import type { Media, MediaType } from './types/media'
+import { inferMediaType } from './types/media'
 
 // 全部 CloudBase 细节收敛在此文件，页面只依赖这里导出的函数，
 // 便于将来切换登录方式 / SDK 版本时集中修改。
@@ -147,4 +149,57 @@ export async function toPreviewUrl(url: string): Promise<string> {
   if (!url || !url.startsWith('cloud://')) return url
   const { fileList } = await app.getTempFileURL({ fileList: [url] })
   return fileList?.[0]?.tempFileURL || ''
+}
+
+// ---- 媒体库（media 集合：资产元数据，与展品解耦）----
+//
+// 安全规则同 exhibits：{ read: true, write: "auth != null" }。
+// media 集合需在云控制台手动创建（见实施计划前置事项）。
+
+const MEDIA_COLLECTION = 'media'
+
+/** 查询媒体库；可选按类型过滤，按上传时间倒序。 */
+export async function fetchMedia(type?: MediaType): Promise<Media[]> {
+  let query = db.collection(MEDIA_COLLECTION).orderBy('uploadedAt', 'desc')
+  if (type) query = db.collection(MEDIA_COLLECTION).where({ type }).orderBy('uploadedAt', 'desc')
+  const { data } = await query.limit(1000).get()
+  return (data ?? []) as Media[]
+}
+
+/** 上传单个文件进库：先传云存储得 fileID，再写一条 media 记录。返回该记录。 */
+export async function uploadMediaToLibrary(file: File): Promise<Media> {
+  const type = inferMediaType(file.name)
+  if (!type) throw new Error(`不支持的文件类型：${file.name}`)
+  const fileID = await uploadMedia(file, type)
+  const record: Media = { fileID, name: file.name, type, size: file.size, uploadedAt: Date.now() }
+  const { id } = await db.collection(MEDIA_COLLECTION).add(record)
+  return { ...record, _id: id as string }
+}
+
+/** 批量上传进库；单文件失败不影响整批，逐条计入 failed。 */
+export async function uploadMediaBatch(
+  files: File[],
+  onProgress?: (d: number, t: number) => void,
+): Promise<BatchResult<File>> {
+  return runBatch(files, (f) => uploadMediaToLibrary(f).then(() => undefined), 3, onProgress)
+}
+
+/** 删除媒体记录；alsoDeleteFile 时一并删云存储文件（默认删）。 */
+export async function deleteMedia(
+  m: { _id?: string; fileID: string },
+  alsoDeleteFile = true,
+): Promise<void> {
+  if (!m._id) throw new Error('缺少 media _id，无法删除')
+  await db.collection(MEDIA_COLLECTION).doc(m._id).remove()
+  if (alsoDeleteFile && m.fileID.startsWith('cloud://')) {
+    await app.deleteFile({ fileList: [m.fileID] })
+  }
+}
+
+/** 批量删除媒体。 */
+export async function deleteMediaBatch(
+  items: Media[],
+  onProgress?: (d: number, t: number) => void,
+): Promise<BatchResult<Media>> {
+  return runBatch(items, (m) => deleteMedia({ _id: m._id, fileID: m.fileID }), 3, onProgress)
 }
