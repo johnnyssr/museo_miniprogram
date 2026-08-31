@@ -11,6 +11,7 @@ import type { Media, MediaType } from '../types/media'
 import type { Exhibit } from '../types/exhibit'
 import { countUsage, usedByExhibits } from '../utils/mediaUsage'
 import { UploadFilled, VideoCamera, Headset } from '@element-plus/icons-vue'
+import MediaMatchDialog from '../components/MediaMatchDialog.vue'
 
 const route = useRoute()
 const mediaType = computed(() => route.meta.mediaType as MediaType)
@@ -23,6 +24,7 @@ const loading = ref(false)
 const list = ref<Media[]>([])
 const exhibits = ref<Exhibit[]>([])
 const keyword = ref('')
+const matchOpen = ref(false)
 const selected = ref<Media[]>([])
 const uploading = ref(false)
 const progress = ref(0)
@@ -157,6 +159,7 @@ watch(mediaType, load, { immediate: true })
       <h2 class="lib-title">{{ label }}管理</h2>
       <div class="lib-actions">
         <el-input v-model="keyword" placeholder="按文件名搜索" clearable style="width: 220px" />
+        <el-button type="primary" plain @click="matchOpen = true">按文件名关联展品</el-button>
         <el-button v-if="selected.length" type="danger" plain @click="onDeleteSelected">
           删除选中（{{ selected.length }}）
         </el-button>
@@ -207,6 +210,13 @@ watch(mediaType, load, { immediate: true })
         </div>
       </div>
     </div>
+
+    <MediaMatchDialog
+      v-model="matchOpen"
+      :media-list="list"
+      :exhibits="exhibits"
+      @applied="load"
+    />
   </div>
 </template>
 
