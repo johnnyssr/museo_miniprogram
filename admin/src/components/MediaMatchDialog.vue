@@ -32,19 +32,19 @@ function rebuild() {
 }
 watch(() => props.modelValue, (v) => { if (v) rebuild() })
 
-const selectableCount = computed(() =>
-  rows.value.filter((r) => r.status !== 'unmatched' && r.media._id && checked.value[r.media._id]).length,
-)
+function isSelected(r: MatchPlanRow): boolean {
+  return r.status !== 'unmatched' && !!r.media._id && !!checked.value[r.media._id]
+}
+
+const selectableCount = computed(() => rows.value.filter(isSelected).length)
 
 async function apply() {
-  const targets = rows.value.filter(
-    (r) => r.status !== 'unmatched' && r.exhibit && r.field && r.media._id && checked.value[r.media._id],
-  )
+  const targets = rows.value.filter((r) => isSelected(r) && r.exhibit && r.field)
   if (!targets.length) { ElMessage.info('没有勾选任何可关联项'); return }
   applying.value = true
   try {
     const res = await runBatch(targets, async (r) => {
-      await updateExhibit({ ...(r.exhibit as Exhibit), [r.field as string]: r.media.fileID })
+      await updateExhibit({ _id: (r.exhibit as Exhibit)._id, [r.field as string]: r.media.fileID } as unknown as Exhibit)
     }, 5)
     const skipped = rows.value.length - targets.length
     if (res.failed.length) {
@@ -103,7 +103,7 @@ function close() { emit('update:modelValue', false) }
     </el-table>
     <template #footer>
       <el-button @click="close">取消</el-button>
-      <el-button type="primary" :loading="applying" @click="apply">
+      <el-button type="primary" :loading="applying" :disabled="!selectableCount" @click="apply">
         应用（{{ selectableCount }}）
       </el-button>
     </template>
