@@ -211,7 +211,7 @@ onMounted(load)
   margin-bottom: 16px;
 }
 .muted {
-  color: #8a7d6a;
+  color: var(--ocean-text-muted);
 }
 .qr-body {
   display: flex;
@@ -222,7 +222,7 @@ onMounted(load)
 .qr-meta {
   margin: 0;
   font-weight: 600;
-  color: #3a2f22;
+  color: var(--ocean-text-strong);
 }
 .qr-canvas {
   display: flex;

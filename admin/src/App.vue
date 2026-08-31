@@ -28,7 +28,7 @@ body,
 .app-header {
   display: flex;
   align-items: center;
-  background: #8a6d3b;
+  background: var(--ocean-primary);
   color: #fff;
 }
 .app-title {

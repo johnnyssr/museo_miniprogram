@@ -96,7 +96,7 @@ function onUrlInput(val: string) {
 }
 .media-value {
   font-size: 12px;
-  color: #8a7d6a;
+  color: var(--ocean-text-muted);
   word-break: break-all;
   margin-top: 4px;
 }

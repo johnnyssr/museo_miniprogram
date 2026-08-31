@@ -66,7 +66,7 @@ async function onSubmit() {
 .login-title {
   margin: 0 0 16px;
   text-align: center;
-  color: #3a2f22;
+  color: var(--ocean-text-strong);
 }
 .login-btn {
   width: 100%;
