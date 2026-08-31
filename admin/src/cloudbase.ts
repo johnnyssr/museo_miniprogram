@@ -206,3 +206,44 @@ export async function deleteMediaBatch(
 ): Promise<BatchResult<Media>> {
   return runBatch(items, (m) => deleteMedia({ _id: m._id, fileID: m.fileID }), 3, onProgress)
 }
+
+/** 更新媒体元数据（目前仅文件名）。文件名是「按文件名关联展品」的匹配钥匙。 */
+export async function updateMedia(m: { _id?: string; name: string }): Promise<void> {
+  if (!m._id) throw new Error('缺少 media _id，无法更新')
+  await db.collection(MEDIA_COLLECTION).doc(m._id).update({ name: m.name })
+}
+
+/**
+ * 把某媒体加入展品：图片追加进 images（去重），音/视频写入对应单值字段（会替换原值）。
+ * exhibit 为内存中的展品对象，需含 _id。
+ */
+export async function attachMediaToExhibit(exhibit: Exhibit, fileID: string, type: MediaType): Promise<void> {
+  if (type === 'image') {
+    const images = exhibitImages(exhibit)
+    if (images.includes(fileID)) return
+    await updateExhibit({ _id: exhibit._id, images: [...images, fileID] } as unknown as Exhibit)
+  } else {
+    const field = type === 'audio' ? 'audioUrl' : 'videoUrl'
+    await updateExhibit({ _id: exhibit._id, [field]: fileID } as unknown as Exhibit)
+  }
+}
+
+/** 把某媒体从展品移除：图片从 images 删掉；音/视频仅当当前值等于该文件时清空。 */
+export async function detachMediaFromExhibit(exhibit: Exhibit, fileID: string, type: MediaType): Promise<void> {
+  if (type === 'image') {
+    const images = exhibitImages(exhibit).filter((u) => u !== fileID)
+    await updateExhibit({ _id: exhibit._id, images } as unknown as Exhibit)
+  } else {
+    const field = type === 'audio' ? 'audioUrl' : 'videoUrl'
+    if ((exhibit[field] as string) !== fileID) return
+    await updateExhibit({ _id: exhibit._id, [field]: '' } as unknown as Exhibit)
+  }
+}
+
+/** 批量把多张图片一次性追加进某展品的图集（去重，单次写入避免并发覆盖）。 */
+export async function appendImagesToExhibit(exhibit: Exhibit, fileIDs: string[]): Promise<void> {
+  const existing = exhibitImages(exhibit)
+  const additions = fileIDs.filter((id) => !existing.includes(id))
+  if (!additions.length) return
+  await updateExhibit({ _id: exhibit._id, images: [...existing, ...additions] } as unknown as Exhibit)
+}

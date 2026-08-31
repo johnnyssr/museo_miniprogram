@@ -144,14 +144,17 @@ function renderQR() {
   else loadMpQR()
 }
 
-// 普通文本二维码：前端生成，编码展品编号（小程序内「扫一扫」可识别）
+// 普通文本二维码：前端生成。编码为一句提示语并内嵌展品编号：
+//  - 微信「扫一扫」等通用扫码器：直接显示这句提示，引导用户改用小程序扫码
+//  - 小程序内「扫一扫」：从文本中解析出展品编号后跳转（见 miniprogram parseExhibitId）
 async function genTextQR() {
   if (!qrTarget.value) return
   qrLoading.value = true
   qrError.value = ''
   qrDataUrl.value = ''
   try {
-    qrDataUrl.value = await QRCode.toDataURL(qrTarget.value.exhibitId, { width: 240, margin: 1 })
+    const text = `请使用小程序"北部湾海洋生态守护站讲解"进行扫码\n展品编号：${qrTarget.value.exhibitId}`
+    qrDataUrl.value = await QRCode.toDataURL(text, { width: 240, margin: 1 })
   } catch (err) {
     qrError.value = err instanceof Error ? err.message : '生成二维码失败'
   } finally {
@@ -264,7 +267,7 @@ onMounted(load)
           v-if="qrMode === 'text'"
           type="info"
           :closable="false"
-          title="普通二维码：编码展品编号，仅小程序内「扫一扫」可识别跳转。当前未上线阶段即可用。"
+          title="普通二维码：小程序内「扫一扫」可直接跳转；用微信通用扫一扫会提示改用小程序扫码。未上线阶段即可用。"
         />
         <el-alert
           v-else

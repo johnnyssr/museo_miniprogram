@@ -40,6 +40,7 @@ async function resolveCloudUrls(urls: string[]): Promise<Map<string, string>> {
     const res = await wx.cloud.getTempFileURL({ fileList: ids.slice(i, i + 50) })
     for (const f of res.fileList) {
       if (f.tempFileURL) map.set(f.fileID, f.tempFileURL)
+      else console.warn('[exhibit] getTempFileURL 失败', f.fileID, f.status, (f as { errmsg?: string }).errmsg)
     }
   }
   return map

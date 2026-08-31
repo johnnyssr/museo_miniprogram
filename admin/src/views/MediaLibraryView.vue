@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadRawFile } from 'element-plus'
 import {
-  fetchMedia, uploadMediaBatch, deleteMedia, deleteMediaBatch,
+  fetchMedia, uploadMediaBatch, deleteMediaBatch,
   fetchExhibits, toPreviewUrl,
 } from '../cloudbase'
 import type { Media, MediaType } from '../types/media'
@@ -12,6 +12,8 @@ import type { Exhibit } from '../types/exhibit'
 import { countUsage, usedByExhibits } from '../utils/mediaUsage'
 import { UploadFilled, VideoCamera, Headset } from '@element-plus/icons-vue'
 import MediaMatchDialog from '../components/MediaMatchDialog.vue'
+import MediaEditDialog from '../components/MediaEditDialog.vue'
+import MediaAssignDialog from '../components/MediaAssignDialog.vue'
 
 const route = useRoute()
 const mediaType = computed(() => route.meta.mediaType as MediaType)
@@ -25,6 +27,8 @@ const list = ref<Media[]>([])
 const exhibits = ref<Exhibit[]>([])
 const keyword = ref('')
 const matchOpen = ref(false)
+const editOpen = ref(false)
+const assignOpen = ref(false)
 const selected = ref<Media[]>([])
 const uploading = ref(false)
 const progress = ref(0)
@@ -33,6 +37,10 @@ const previews = ref<Record<string, string>>({}) // fileID -> 临时 url（仅�
 const filtered = computed(() =>
   list.value.filter((m) => m.name.toLowerCase().includes(keyword.value.trim().toLowerCase())),
 )
+
+// 单选时的编辑目标（恰好选中 1 个才有值）
+const editTarget = computed<Media | null>(() => (selected.value.length === 1 ? selected.value[0] : null))
+const allChecked = computed(() => filtered.value.length > 0 && selected.value.length === filtered.value.length)
 
 async function load() {
   selected.value = []
@@ -82,15 +90,6 @@ function usageText(m: Media): string {
   return n > 0 ? `使用中 · ${n} 个展品` : '未使用'
 }
 
-async function copyId(m: Media) {
-  try {
-    await navigator.clipboard.writeText(m.fileID)
-    ElMessage.success('已复制 fileID')
-  } catch {
-    ElMessage.error('复制失败，请手动复制')
-  }
-}
-
 async function confirmUsage(items: Media[]): Promise<boolean> {
   const occupied = items
     .map((m) => ({ m, users: usedByExhibits(m.fileID, exhibits.value) }))
@@ -111,17 +110,6 @@ async function confirmUsage(items: Media[]): Promise<boolean> {
   return true
 }
 
-async function onDeleteOne(m: Media) {
-  if (!(await confirmUsage([m]))) return
-  try {
-    await deleteMedia({ _id: m._id, fileID: m.fileID })
-    ElMessage.success('已删除')
-    await load()
-  } catch (err) {
-    ElMessage.error(err instanceof Error ? err.message : '删除失败')
-  }
-}
-
 async function onDeleteSelected() {
   if (!selected.value.length) return
   if (!(await confirmUsage(selected.value))) return
@@ -131,7 +119,6 @@ async function onDeleteSelected() {
   } else {
     ElMessage.success(`已删除 ${res.ok.length} 个`)
   }
-  selected.value = []
   await load()
 }
 
@@ -143,8 +130,15 @@ function toggleSelect(m: Media) {
 function isSelected(m: Media) {
   return selected.value.some((x) => x._id === m._id)
 }
+function toggleAll() {
+  selected.value = allChecked.value ? [] : [...filtered.value]
+}
+function clearSelection() {
+  selected.value = []
+}
 
 function fmtSize(n: number): string {
+  if (!n || n <= 0) return '大小未知' // 早期缺失 size 的记录，避免显示误导性的 0 B
   if (n < 1024) return `${n} B`
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
   return `${(n / 1024 / 1024).toFixed(1)} MB`
@@ -160,9 +154,6 @@ watch(mediaType, load, { immediate: true })
       <div class="lib-actions">
         <el-input v-model="keyword" placeholder="按文件名搜索" clearable style="width: 220px" />
         <el-button type="primary" plain @click="matchOpen = true">按文件名关联展品</el-button>
-        <el-button v-if="selected.length" type="danger" plain @click="onDeleteSelected">
-          删除选中（{{ selected.length }}）
-        </el-button>
       </div>
     </div>
 
@@ -181,6 +172,28 @@ watch(mediaType, load, { immediate: true })
     <div class="upload-bar">
       <el-button type="primary" :loading="uploading" @click="runUpload">开始上传</el-button>
       <el-progress v-if="uploading" :percentage="progress" style="flex: 1" />
+    </div>
+
+    <!-- 选择工具条：全选 + 选中后操作 -->
+    <div class="sel-bar">
+      <el-checkbox
+        :model-value="allChecked" :indeterminate="selected.length > 0 && !allChecked"
+        :disabled="!filtered.length" @change="toggleAll"
+      >全选</el-checkbox>
+
+      <template v-if="selected.length">
+        <span class="sel-count">已选 {{ selected.length }}</span>
+        <el-button v-if="selected.length === 1" size="small" @click="editOpen = true">编辑</el-button>
+        <el-button
+          v-if="mediaType === 'image' && selected.length > 1"
+          size="small" type="primary" plain @click="assignOpen = true"
+        >批量对应展品</el-button>
+        <el-button size="small" type="danger" plain @click="onDeleteSelected">删除选中</el-button>
+        <el-button size="small" text @click="clearSelection">取消选择</el-button>
+      </template>
+      <span v-else class="sel-hint">
+        选中 1 个可编辑名称与对应展品；{{ mediaType === 'image' ? '多选可批量对应展品或批量删除' : '多选可批量删除' }}
+      </span>
     </div>
 
     <div v-if="!filtered.length" class="lib-empty">暂无{{ label }}，先上传一些吧</div>
@@ -204,10 +217,6 @@ watch(mediaType, load, { immediate: true })
         <div class="card-usage" :class="{ used: countUsage(m.fileID, exhibits) > 0 }">
           {{ usageText(m) }}
         </div>
-        <div class="card-ops" @click.stop>
-          <el-button link size="small" @click="copyId(m)">复制链接</el-button>
-          <el-button link size="small" type="danger" @click="onDeleteOne(m)">删除</el-button>
-        </div>
       </div>
     </div>
 
@@ -216,6 +225,20 @@ watch(mediaType, load, { immediate: true })
       :media-list="list"
       :exhibits="exhibits"
       @applied="load"
+    />
+    <MediaEditDialog
+      v-model="editOpen"
+      :media="editTarget"
+      :media-type="mediaType"
+      :exhibits="exhibits"
+      :preview-url="editTarget ? previews[editTarget.fileID] : ''"
+      @saved="load"
+    />
+    <MediaAssignDialog
+      v-model="assignOpen"
+      :media-list="selected"
+      :exhibits="exhibits"
+      @assigned="load"
     />
   </div>
 </template>
@@ -227,7 +250,14 @@ watch(mediaType, load, { immediate: true })
 .lib-upload { display: block; }
 .upload-inner { padding: 16px; color: var(--ocean-text-body); }
 .upload-icon { font-size: 40px; color: var(--ocean-primary); }
-.upload-bar { display: flex; align-items: center; gap: 12px; margin: 12px 0 20px; }
+.upload-bar { display: flex; align-items: center; gap: 12px; margin: 12px 0 12px; }
+.sel-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 12px; margin-bottom: 16px; min-height: 40px;
+  background: var(--ocean-primary-bg); border-radius: 8px;
+}
+.sel-count { font-size: 13px; color: var(--ocean-text-strong); font-weight: 600; }
+.sel-hint { font-size: 12px; color: var(--ocean-text-muted); }
 .lib-empty { text-align: center; color: var(--ocean-text-muted); padding: 48px 0; }
 .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
 .card {
@@ -246,5 +276,4 @@ watch(mediaType, load, { immediate: true })
 .card-meta { font-size: 12px; color: var(--ocean-text-muted); }
 .card-usage { font-size: 12px; color: var(--ocean-text-hint); }
 .card-usage.used { color: var(--ocean-primary); }
-.card-ops { display: flex; justify-content: space-between; margin-top: 4px; }
 </style>
