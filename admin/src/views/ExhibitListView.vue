@@ -39,6 +39,17 @@ const paged = computed(() => {
   return filtered.value.slice(start, start + pageSize.value)
 })
 
+// 多选与批量操作（本任务只建骨架，实际功能在后续任务填充）
+const selected = ref<Exhibit[]>([])
+function onSelectionChange(sel: Exhibit[]) {
+  selected.value = sel
+}
+
+// 空实现，后续任务填充
+function onBatchDelete() {}
+function onBatchQr() {}
+function onBatchDynasty() {}
+
 // 二维码弹窗状态
 const qrVisible = ref(false)
 const qrMode = ref<'text' | 'mp'>('text') // text=普通二维码（现在即用）, mp=小程序码（发布后用）
@@ -167,7 +178,15 @@ onMounted(load)
       </el-select>
     </div>
 
-    <el-table :data="paged" v-loading="loading" border stripe empty-text="暂无展品">
+    <div v-if="selected.length" class="batch-bar">
+      <span>已选 {{ selected.length }} 项</span>
+      <el-button type="danger" plain @click="onBatchDelete">批量删除</el-button>
+      <el-button type="primary" plain @click="onBatchQr">批量导出二维码</el-button>
+      <el-button plain @click="onBatchDynasty">批量设置朝代</el-button>
+    </div>
+
+    <el-table :data="paged" v-loading="loading" border stripe empty-text="暂无展品" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="48" />
       <el-table-column label="图片" width="90">
         <template #default="{ row }">
           <el-image
@@ -253,6 +272,15 @@ onMounted(load)
   display: flex;
   gap: 12px;
   margin-bottom: 16px;
+}
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--ocean-primary-bg);
+  border-radius: 6px;
+  margin-bottom: 12px;
 }
 .pager {
   margin-top: 16px;
