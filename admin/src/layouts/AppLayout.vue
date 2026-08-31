@@ -48,7 +48,8 @@ import { logout } from '../cloudbase'
 const route = useRoute()
 const router = useRouter()
 const collapsed = ref(false)
-const activeMenu = computed(() => route.path)
+// 展品的新增/编辑等子路由归到「展品管理」菜单项高亮
+const activeMenu = computed(() => (route.path.startsWith('/exhibits') ? '/exhibits' : route.path))
 const CRUMBS: Record<string, string> = {
   '/dashboard': '数据概览',
   '/exhibits': '展品管理',
