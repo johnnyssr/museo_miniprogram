@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
 import {
   fetchExhibits,
   deleteExhibit,
-  logout,
   toPreviewUrl,
   fetchExhibitQRCode,
 } from '../cloudbase'
@@ -15,6 +14,30 @@ import type { Exhibit } from '../types/exhibit'
 const router = useRouter()
 const loading = ref(false)
 const rows = ref<Array<Exhibit & { _thumb?: string }>>([])
+
+// 列表筛选 / 排序 / 分页（数据量小，全部在已加载的 rows 上做客户端处理）
+const keyword = ref('')
+const dynastyFilter = ref('')
+const sortBy = ref<'exhibitId' | 'name'>('exhibitId')
+const page = ref(1)
+const pageSize = ref(20)
+
+const dynastyOptions = computed(() =>
+  Array.from(new Set(rows.value.map(e => e.dynasty).filter(Boolean))) as string[])
+
+const filtered = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  return rows.value
+    .filter(e => !kw || e.name.toLowerCase().includes(kw) || e.exhibitId.toLowerCase().includes(kw))
+    .filter(e => !dynastyFilter.value || e.dynasty === dynastyFilter.value)
+    .slice()
+    .sort((a, b) => String(a[sortBy.value]).localeCompare(String(b[sortBy.value]), 'zh'))
+})
+
+const paged = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filtered.value.slice(start, start + pageSize.value)
+})
 
 // 二维码弹窗状态
 const qrVisible = ref(false)
@@ -66,12 +89,7 @@ async function onDelete(row: Exhibit) {
   }
 }
 
-async function onLogout() {
-  await logout()
-  router.replace('/login')
-}
-
-// 打开二维码弹窗（默认普通二维码，当前阶段即可用）
+// 打开二维码弹窗（默认普通二维码，当前阶段即可用）（默认普通二维码，当前阶段即可用）
 function openQR(row: Exhibit) {
   qrTarget.value = { exhibitId: row.exhibitId, name: row.name }
   qrMode.value = 'text'
@@ -135,11 +153,21 @@ onMounted(load)
       <el-button type="primary" @click="goNew">新增展品</el-button>
       <div class="toolbar-right">
         <el-button link @click="load">刷新</el-button>
-        <el-button link @click="onLogout">退出登录</el-button>
       </div>
     </div>
 
-    <el-table :data="rows" v-loading="loading" border stripe empty-text="暂无展品">
+    <div class="filter-bar">
+      <el-input v-model="keyword" placeholder="搜索名称/编号" clearable style="width: 220px" />
+      <el-select v-model="dynastyFilter" placeholder="按朝代筛选" clearable style="width: 160px">
+        <el-option v-for="d in dynastyOptions" :key="d" :label="d" :value="d" />
+      </el-select>
+      <el-select v-model="sortBy" style="width: 140px">
+        <el-option label="按编号" value="exhibitId" />
+        <el-option label="按名称" value="name" />
+      </el-select>
+    </div>
+
+    <el-table :data="paged" v-loading="loading" border stripe empty-text="暂无展品">
       <el-table-column label="图片" width="90">
         <template #default="{ row }">
           <el-image
@@ -162,6 +190,17 @@ onMounted(load)
         </template>
       </el-table-column>
     </el-table>
+
+    <el-pagination
+      class="pager"
+      layout="total, prev, pager, next, sizes"
+      :total="filtered.length"
+      :page-size="pageSize"
+      :current-page="page"
+      :page-sizes="[10, 20, 50, 100]"
+      @current-change="page = $event"
+      @size-change="pageSize = $event; page = 1"
+    />
 
     <el-dialog v-model="qrVisible" title="展品二维码" width="360">
       <div v-if="qrTarget" class="qr-body">
@@ -209,6 +248,16 @@ onMounted(load)
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+}
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.pager {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
 }
 .muted {
   color: var(--ocean-text-muted);
