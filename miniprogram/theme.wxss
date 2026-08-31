@@ -1,0 +1,12 @@
+/* 海洋青蓝主题 · 色值约定（各页 .wxss 按此表替换）
+   primary        #1f6f78   主色：按钮/链接/标签/箭头
+   text-strong    #183b40   主标题
+   text-body      #3d5257   正文
+   text-muted     #7a9196   次要文字/空状态
+   text-hint      #a9bcc0   提示/箭头
+   bg-page        #f2f7f7   页面背景
+   border         #cfe1e2   边框
+   placeholder    #e0efee   占位底
+   shadow         rgba(24,59,64,0.08) 卡片阴影
+*/
+page { background: #f2f7f7; color: #3d5257; }
