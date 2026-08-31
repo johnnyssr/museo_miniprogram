@@ -124,6 +124,13 @@ export async function createExhibitsBatch(
   return runBatch(rows, (r) => createExhibit(r as Exhibit).then(() => undefined), 5, onProgress)
 }
 
+export async function updateExhibitField(
+  items: Exhibit[], field: 'dynasty', value: string,
+  onProgress?: (d: number, t: number) => void,
+): Promise<BatchResult<Exhibit>> {
+  return runBatch(items, (e) => updateExhibit({ ...e, [field]: value }).then(() => undefined), 5, onProgress)
+}
+
 // ---- 云存储 ----
 
 /** 上传浏览器 File 到云存储，返回 cloud:// fileID。 */

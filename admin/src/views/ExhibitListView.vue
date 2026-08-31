@@ -9,6 +9,7 @@ import {
   deleteExhibitsBatch,
   toPreviewUrl,
   fetchExhibitQRCode,
+  updateExhibitField,
 } from '../cloudbase'
 import type { Exhibit } from '../types/exhibit'
 import { collectQrCodes, exportQrZip, printQrSheet } from '../utils/qrExport'
@@ -81,7 +82,21 @@ async function onBatchQr() {
   else printQrSheet(ok)
   if (failed.length) ElMessage.warning(`${failed.length} 个生成失败，已跳过`)
 }
-function onBatchDynasty() {}
+async function onBatchDynasty() {
+  let value: string
+  try {
+    ({ value } = await ElMessageBox.prompt(
+      `为选中的 ${selected.value.length} 条展品统一设置朝代：`, '批量设置朝代',
+      { confirmButtonText: '确定', cancelButtonText: '取消' },
+    ))
+  } catch {
+    return // 用户取消
+  }
+  const res = await updateExhibitField(selected.value, 'dynasty', (value || '').trim())
+  ElMessage[res.failed.length ? 'warning' : 'success'](
+    `更新完成：成功 ${res.ok.length}${res.failed.length ? '，失败 ' + res.failed.length : ''}`)
+  await load()
+}
 
 // 二维码弹窗状态
 const qrVisible = ref(false)
