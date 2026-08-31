@@ -29,6 +29,34 @@ function toExhibit(doc: ExhibitDoc): Exhibit {
   }
 }
 
+/**
+ * 批量把 cloud:// fileID 换成可直接渲染的临时 https URL；非 cloud:// 原样保留。
+ * <image>/<video>/音频 直接吃 cloud:// 不稳定，统一在此转换。getTempFileURL 单次上限 50。
+ */
+async function resolveCloudUrls(urls: string[]): Promise<Map<string, string>> {
+  const ids = [...new Set(urls.filter((u) => u && u.startsWith('cloud://')))]
+  const map = new Map<string, string>()
+  for (let i = 0; i < ids.length; i += 50) {
+    const res = await wx.cloud.getTempFileURL({ fileList: ids.slice(i, i + 50) })
+    for (const f of res.fileList) {
+      if (f.tempFileURL) map.set(f.fileID, f.tempFileURL)
+    }
+  }
+  return map
+}
+
+const resolve = (u: string, map: Map<string, string>): string => map.get(u) || u
+
+/** 把展品内的媒体地址（图集 + 音/视频）就地换成临时 URL。 */
+async function resolveExhibitMedia(e: Exhibit): Promise<Exhibit> {
+  const map = await resolveCloudUrls([...e.images, e.audioUrl, e.videoUrl])
+  e.images = e.images.map((u) => resolve(u, map))
+  e.image = e.images[0] || ''
+  e.audioUrl = resolve(e.audioUrl, map)
+  e.videoUrl = resolve(e.videoUrl, map)
+  return e
+}
+
 /** 按业务编号查询单个展品，找不到返回 undefined */
 export async function getExhibitById(id: string): Promise<Exhibit | undefined> {
   const res = await wx.cloud.callFunction({
@@ -36,7 +64,7 @@ export async function getExhibitById(id: string): Promise<Exhibit | undefined> {
     data: { exhibitId: id },
   })
   const doc = (res.result as { exhibit: ExhibitDoc | null }).exhibit
-  return doc ? toExhibit(doc) : undefined
+  return doc ? resolveExhibitMedia(toExhibit(doc)) : undefined
 }
 
 /** 返回全部展品 */
@@ -45,6 +73,12 @@ export async function getAllExhibits(): Promise<Exhibit[]> {
     name: 'getExhibits',
     data: {},
   })
-  const list = (res.result as { list: ExhibitDoc[] }).list || []
-  return list.map(toExhibit)
+  const list = ((res.result as { list: ExhibitDoc[] }).list || []).map(toExhibit)
+  // 列表页只需封面缩略图；把各展品的图集统一批量转临时 URL
+  const map = await resolveCloudUrls(list.flatMap((e) => e.images))
+  for (const e of list) {
+    e.images = e.images.map((u) => resolve(u, map))
+    e.image = e.images[0] || ''
+  }
+  return list
 }
