@@ -1,6 +1,7 @@
 import cloudbase from '@cloudbase/js-sdk'
 import { CLOUD_ENV, CLOUD_REGION, CLOUD_ACCESS_KEY } from './config'
 import type { Exhibit } from './types/exhibit'
+import { runBatch, type BatchResult } from './utils/batch'
 
 // 全部 CloudBase 细节收敛在此文件，页面只依赖这里导出的函数，
 // 便于将来切换登录方式 / SDK 版本时集中修改。
@@ -107,6 +108,13 @@ export async function deleteExhibit(locator: { _id?: string; exhibitId?: string 
   } else {
     throw new Error('缺少 _id 或 exhibitId，无法删除')
   }
+}
+
+export async function deleteExhibitsBatch(
+  items: Exhibit[],
+  onProgress?: (d: number, t: number) => void,
+): Promise<BatchResult<Exhibit>> {
+  return runBatch(items, (e) => deleteExhibit({ _id: e._id, exhibitId: e.exhibitId }), 5, onProgress)
 }
 
 // ---- 云存储 ----

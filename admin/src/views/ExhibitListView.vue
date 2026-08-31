@@ -6,6 +6,7 @@ import QRCode from 'qrcode'
 import {
   fetchExhibits,
   deleteExhibit,
+  deleteExhibitsBatch,
   toPreviewUrl,
   fetchExhibitQRCode,
 } from '../cloudbase'
@@ -46,7 +47,23 @@ function onSelectionChange(sel: Exhibit[]) {
 }
 
 // 空实现，后续任务填充
-function onBatchDelete() {}
+async function onBatchDelete() {
+  try {
+    await ElMessageBox.confirm(
+      `将删除选中的 ${selected.value.length} 条展品，删除后不可恢复。是否继续？`,
+      '批量删除确认', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    )
+  } catch {
+    return // 用户取消
+  }
+  const res = await deleteExhibitsBatch(selected.value)
+  if (res.failed.length) {
+    ElMessage.error(`删除完成：成功 ${res.ok.length}，失败 ${res.failed.length}。首个失败原因：${res.failed[0].error}`)
+  } else {
+    ElMessage.success(`已删除 ${res.ok.length} 条`)
+  }
+  await load()
+}
 function onBatchQr() {}
 function onBatchDynasty() {}
 
