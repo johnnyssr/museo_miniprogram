@@ -148,7 +148,7 @@ async function onDelete(row: Exhibit) {
   }
 }
 
-// 打开二维码弹窗（默认普通二维码，当前阶段即可用）（默认普通二维码，当前阶段即可用）
+// 打开二维码弹窗（默认普通二维码，当前阶段即可用）
 function openQR(row: Exhibit) {
   qrTarget.value = { exhibitId: row.exhibitId, name: row.name }
   qrMode.value = 'text'

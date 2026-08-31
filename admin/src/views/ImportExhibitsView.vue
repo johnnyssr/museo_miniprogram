@@ -59,23 +59,29 @@ function downloadTemplate() {
 }
 
 async function onFile(file: { raw: File }) {
-  const text = await file.raw.text()
-  const existing = await fetchExhibits()
-  const ids = new Set(existing.map(e => e.exhibitId))
-  rows.value = parseAndValidate(text, ids)
-  step.value = 2
+  try {
+    const text = await file.raw.text()
+    const existing = await fetchExhibits()
+    const ids = new Set(existing.map(e => e.exhibitId))
+    rows.value = parseAndValidate(text, ids)
+    step.value = 2
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : '读取或解析 CSV 失败')
+  }
 }
 
 async function doImport() {
   importing.value = true
   try {
     const res = await createExhibitsBatch(validRows.value.map(r => r.data))
-    step.value = 3
     if (res.failed.length) {
       ElMessage.error(`导入完成：成功 ${res.ok.length}，失败 ${res.failed.length}。首个失败：${res.failed[0].error}`)
     } else {
       ElMessage.success(`成功导入 ${res.ok.length} 条`)
     }
+    // 导入后回到起点，并清空已解析行，避免下次校验命中过期的库内编号
+    rows.value = []
+    step.value = 1
   } finally { importing.value = false }
 }
 </script>
