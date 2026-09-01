@@ -24,17 +24,20 @@ page {
   color: #6a8f9c;
 }
 .scan-btn {
-  width: 60%;
+  width: 70%;
   background: #0e88ab;
   color: #fff;
-  border-radius: 48rpx;
-  font-size: 32rpx;
+  border-radius: 56rpx;
+  font-size: 48rpx;
+  font-weight: bold;
+  padding: 28rpx 0;
+  line-height: 1.4;
 }
 .browse-link {
-  margin-top: 32rpx;
-  font-size: 28rpx;
+  margin-top: 40rpx;
+  font-size: 40rpx;
   color: #0e88ab;
-  padding: 12rpx 24rpx;
-  border: 1rpx solid #c4e2ec;
-  border-radius: 40rpx;
+  padding: 24rpx 48rpx;
+  border: 2rpx solid #c4e2ec;
+  border-radius: 48rpx;
 }

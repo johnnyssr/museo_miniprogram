@@ -1,23 +1,65 @@
 <!--list.wxml-->
 <scroll-view scroll-y class="page">
-  <view class="page-title">全部展品</view>
 
-  <view wx:if="{{list.length === 0}}" class="empty">
+  <!-- 顶部：标题 + 打卡进度 -->
+  <view class="page-header">
+    <text class="page-title">全部展品</text>
+    <view wx:if="{{totalCount > 0}}" class="progress-wrap">
+      <text class="progress-text">已参观 {{visitedCount}} / {{totalCount}}</text>
+      <view class="progress-bar-bg">
+        <view class="progress-bar-fill" style="width: {{totalCount > 0 ? visitedCount * 100 / totalCount : 0}}%" />
+      </view>
+    </view>
+  </view>
+
+  <!-- 搜索框 -->
+  <view class="search-wrap">
+    <input
+      class="search-input"
+      placeholder="搜索展品名称或简述"
+      placeholder-class="search-placeholder"
+      bindinput="onSearchInput"
+      value="{{searchKeyword}}"
+    />
+  </view>
+
+  <!-- 分类筛选 -->
+  <scroll-view wx:if="{{categories.length > 1}}" scroll-x class="cat-scroll">
+    <view class="cat-row">
+      <view
+        wx:for="{{categories}}"
+        wx:key="*this"
+        class="cat-chip {{activeCategory === item ? 'cat-chip--active' : ''}}"
+        data-cat="{{item}}"
+        bindtap="onCategoryTap"
+      >{{item}}</view>
+    </view>
+  </scroll-view>
+
+  <!-- 展品列表 -->
+  <view wx:if="{{filteredList.length === 0}}" class="empty">
     <text>暂无展品</text>
   </view>
 
   <view
-    wx:for="{{list}}"
+    wx:for="{{filteredList}}"
     wx:key="id"
     class="card"
     data-id="{{item.id}}"
     bindtap="onTapExhibit"
   >
-    <image class="thumb" src="{{item.image}}" mode="aspectFill" />
+    <view class="card-img-wrap">
+      <image class="thumb" src="{{item.image}}" mode="aspectFill" />
+      <view wx:if="{{item.visited}}" class="visited-mark">✓</view>
+    </view>
     <view class="card-body">
       <text class="card-name">{{item.name}}</text>
       <text wx:if="{{item.summary}}" class="card-summary">{{item.summary}}</text>
+      <text wx:if="{{item.category}}" class="card-cat">{{item.category}}</text>
     </view>
     <view class="card-arrow">›</view>
   </view>
+
+  <view class="list-bottom" />
+
 </scroll-view>

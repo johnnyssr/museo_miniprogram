@@ -91,6 +91,16 @@ onMounted(load)
       <el-form-item label="简述">
         <el-input v-model="model.summary" type="textarea" :rows="2" placeholder="一句话简述（选填）" />
       </el-form-item>
+      <el-form-item label="分类">
+        <el-select v-model="model.category" placeholder="选择分类（选填）" clearable style="width: 200px">
+          <el-option label="鱼类" value="鱼类" />
+          <el-option label="珊瑚" value="珊瑚" />
+          <el-option label="哺乳类" value="哺乳类" />
+          <el-option label="贝类" value="贝类" />
+          <el-option label="藻类" value="藻类" />
+          <el-option label="其他" value="其他" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="文本描述">
         <el-input v-model="model.text" type="textarea" :rows="5" placeholder="展品介绍文字" />
       </el-form-item>

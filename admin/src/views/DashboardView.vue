@@ -20,6 +20,7 @@
         <el-table-column prop="exhibitId" label="编号" width="140" />
         <el-table-column prop="name" label="名称" min-width="120" />
         <el-table-column prop="summary" label="简述" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="category" label="分类" width="90" />
         <el-table-column label="图片" width="70" align="center">
           <template #default="{ row }">{{ imageCount(row) }}</template>
         </el-table-column>

@@ -4,12 +4,84 @@
   background: #eef7fa;
   box-sizing: border-box;
 }
+
+/* 顶部标题 + 进度 */
+.page-header {
+  padding: 40rpx 30rpx 0;
+}
 .page-title {
   font-size: 40rpx;
   font-weight: bold;
   color: #0d3a48;
-  padding: 40rpx 30rpx 20rpx;
 }
+.progress-wrap {
+  margin-top: 16rpx;
+  margin-bottom: 4rpx;
+}
+.progress-text {
+  font-size: 24rpx;
+  color: #6a8f9c;
+  margin-bottom: 8rpx;
+  display: block;
+}
+.progress-bar-bg {
+  height: 16rpx;
+  background: #d5eef4;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: #0e88ab;
+  border-radius: 8rpx;
+  transition: width 0.3s;
+}
+
+/* 搜索框 */
+.search-wrap {
+  margin: 20rpx 30rpx 0;
+}
+.search-input {
+  background: #fff;
+  border-radius: 40rpx;
+  padding: 0 30rpx;
+  height: 80rpx;
+  font-size: 28rpx;
+  color: #0d3a48;
+  width: 100%;
+  box-sizing: border-box;
+}
+.search-placeholder {
+  color: #9fc4d0;
+}
+
+/* 分类芯片 */
+.cat-scroll {
+  margin-top: 20rpx;
+  white-space: nowrap;
+}
+.cat-row {
+  display: flex;
+  padding: 0 30rpx;
+  gap: 16rpx;
+}
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 10rpx 28rpx;
+  background: #fff;
+  border-radius: 40rpx;
+  font-size: 26rpx;
+  color: #0d3a48;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cat-chip--active {
+  background: #0e88ab;
+  color: #fff;
+}
+
+/* 展品卡片 */
 .empty {
   display: flex;
   justify-content: center;
@@ -20,24 +92,42 @@
 .card {
   display: flex;
   align-items: center;
-  margin: 20rpx 30rpx;
+  margin: 20rpx 30rpx 0;
   padding: 24rpx;
   background: #fff;
   border-radius: 20rpx;
   box-shadow: 0 6rpx 24rpx rgba(13, 58, 72, 0.08);
 }
+.card-img-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
 .thumb {
   width: 140rpx;
   height: 140rpx;
   border-radius: 16rpx;
-  flex-shrink: 0;
   background: #d5eef4;
+}
+.visited-mark {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  width: 36rpx;
+  height: 36rpx;
+  background: #2e7d53;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .card-body {
   flex: 1;
   display: flex;
   flex-direction: column;
   margin-left: 24rpx;
+  gap: 6rpx;
 }
 .card-name {
   font-size: 34rpx;
@@ -45,12 +135,19 @@
   color: #0d3a48;
 }
 .card-summary {
-  margin-top: 10rpx;
   font-size: 26rpx;
   color: #0e88ab;
+}
+.card-cat {
+  font-size: 22rpx;
+  color: #9fc4d0;
 }
 .card-arrow {
   font-size: 44rpx;
   color: #9fc4d0;
   padding-left: 12rpx;
+}
+
+.list-bottom {
+  height: 40rpx;
 }

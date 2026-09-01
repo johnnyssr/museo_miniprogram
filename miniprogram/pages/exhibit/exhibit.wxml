@@ -4,6 +4,8 @@
 </view>
 
 <scroll-view wx:elif="{{exhibit}}" scroll-y class="page">
+
+  <!-- 图集轮播 -->
   <swiper
     wx:if="{{exhibit.images.length}}"
     class="cover-swiper"
@@ -16,30 +18,58 @@
       <image class="cover" src="{{item}}" mode="aspectFill" data-src="{{item}}" bindtap="onPreviewImage" />
     </swiper-item>
   </swiper>
+
+  <!-- 标题 -->
   <view class="header">
     <text class="name">{{exhibit.name}}</text>
     <text wx:if="{{exhibit.summary}}" class="summary">{{exhibit.summary}}</text>
   </view>
 
+  <!-- 文字介绍 -->
   <view class="section">
-    <view class="section-title">文字介绍</view>
-    <text class="text">{{exhibit.text}}</text>
+    <view class="section-head">
+      <text class="section-title">文字介绍</text>
+      <view class="font-btns">
+        <text class="font-btn" data-dir="down" bindtap="adjustFont">A-</text>
+        <text class="font-btn" data-dir="up" bindtap="adjustFont">A+</text>
+      </view>
+    </view>
+    <text class="text" style="font-size: {{fontSize}}rpx">{{textExpanded || !textLong ? exhibit.text : textShort}}</text>
+    <view wx:if="{{textLong}}" class="text-toggle" bindtap="toggleText">
+      {{textExpanded ? '收起' : '展开全文'}}
+    </view>
   </view>
 
-  <!-- 语音介绍：可展开 -->
+  <!-- 语音介绍 -->
   <view class="block">
     <view class="block-head" bindtap="toggleAudio">
       <text>语音介绍</text>
       <text class="arrow">{{audioExpanded ? '收起' : '展开'}}</text>
     </view>
     <view wx:if="{{audioExpanded}}" class="block-body">
-      <button class="play-btn" bindtap="toggleAudioPlay">
-        {{audioPlaying ? '暂停' : '播放'}}
-      </button>
+      <view class="audio-time-row">
+        <text class="audio-time-txt">{{audioCurrentFmt}}</text>
+        <slider
+          class="audio-slider"
+          value="{{audioProgress}}"
+          bindchange="onAudioSeek"
+          block-size="16"
+          activeColor="#0e88ab"
+          backgroundColor="#c9e8f0"
+        />
+        <text class="audio-time-txt">{{audioDurationFmt}}</text>
+      </view>
+      <view class="audio-controls">
+        <text class="audio-step-btn" data-sec="{{-10}}" bindtap="audioStep">-10s</text>
+        <button class="play-btn" bindtap="toggleAudioPlay" loading="{{audioLoading}}">
+          {{audioPlaying ? '暂停' : '播放'}}
+        </button>
+        <text class="audio-step-btn" data-sec="{{10}}" bindtap="audioStep">+10s</text>
+      </view>
     </view>
   </view>
 
-  <!-- 视频介绍：可展开，展开才渲染 video -->
+  <!-- 视频介绍 -->
   <view class="block">
     <view class="block-head" bindtap="toggleVideo">
       <text>视频介绍</text>
@@ -49,8 +79,23 @@
       <video
         class="video"
         src="{{exhibit.videoUrl}}"
+        poster="{{exhibit.image}}"
         binderror="onVideoError"
+        show-center-play-btn
       />
     </view>
+    <view wx:elif="{{exhibit.videoUrl}}" class="video-preview" bindtap="toggleVideo">
+      <image class="video-thumb" src="{{exhibit.image}}" mode="aspectFill" />
+      <view class="video-play-overlay">
+        <view class="video-play-icon">▶</view>
+        <text class="video-play-hint">点击播放视频</text>
+      </view>
+    </view>
   </view>
+
+  <!-- 底部操作区 -->
+  <view class="bottom-bar">
+    <button open-type="share" class="share-btn">分享给朋友</button>
+  </view>
+
 </scroll-view>
