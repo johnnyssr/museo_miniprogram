@@ -95,7 +95,6 @@
 
   <!-- 底部操作区 -->
   <view class="bottom-bar">
-    <view class="visited-badge">✅ 已参观</view>
     <button open-type="share" class="share-btn">分享给朋友</button>
   </view>
 
