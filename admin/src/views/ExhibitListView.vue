@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import QRCode from 'qrcode'
 import {
   fetchExhibits,
   deleteExhibit,
@@ -80,7 +79,6 @@ async function onBatchQr() {
 
 // 二维码弹窗状态
 const qrVisible = ref(false)
-const qrMode = ref<'text' | 'mp'>('text') // text=普通二维码（现在即用）, mp=小程序码（发布后用）
 const qrLoading = ref(false)
 const qrDataUrl = ref('')
 const qrError = ref('')
@@ -128,50 +126,25 @@ async function onDelete(row: Exhibit) {
   }
 }
 
-// 打开二维码弹窗（默认普通二维码，当前阶段即可用）
+// 打开二维码弹窗：方形小程序二维码，原生扫一扫与小程序内扫一扫均可跳转
 function openQR(row: Exhibit) {
   qrTarget.value = { exhibitId: row.exhibitId, name: row.name }
-  qrMode.value = 'text'
   qrDataUrl.value = ''
   qrError.value = ''
   qrVisible.value = true
-  renderQR()
+  loadMpQR()
 }
 
-// 切换模式 / 版本后重新生成
-function renderQR() {
-  if (qrMode.value === 'text') genTextQR()
-  else loadMpQR()
-}
-
-// 普通文本二维码：前端生成。编码为一句提示语并内嵌展品编号：
-//  - 微信「扫一扫」等通用扫码器：直接显示这句提示，引导用户改用小程序扫码
-//  - 小程序内「扫一扫」：从文本中解析出展品编号后跳转（见 miniprogram parseExhibitId）
-async function genTextQR() {
-  if (!qrTarget.value) return
-  qrLoading.value = true
-  qrError.value = ''
-  qrDataUrl.value = ''
-  try {
-    const text = `请使用小程序"北部湾海洋生态守护站讲解"进行扫码\n展品编号：${qrTarget.value.exhibitId}`
-    qrDataUrl.value = await QRCode.toDataURL(text, { width: 240, margin: 1 })
-  } catch (err) {
-    qrError.value = err instanceof Error ? err.message : '生成二维码失败'
-  } finally {
-    qrLoading.value = false
-  }
-}
-
-// 小程序码：调云函数生成（需配 AppSecret；正式版需小程序已发布）
+// 方形小程序二维码：调云函数 createwxaqrcode 生成（需配 AppSecret；需小程序已发布正式版）
 async function loadMpQR() {
   if (!qrTarget.value) return
   qrLoading.value = true
   qrError.value = ''
   qrDataUrl.value = ''
   try {
-    qrDataUrl.value = await fetchExhibitQRCode(qrTarget.value.exhibitId, 'release')
+    qrDataUrl.value = await fetchExhibitQRCode(qrTarget.value.exhibitId)
   } catch (err) {
-    qrError.value = err instanceof Error ? err.message : '生成小程序码失败'
+    qrError.value = err instanceof Error ? err.message : '生成小程序二维码失败'
   } finally {
     qrLoading.value = false
   }
@@ -179,10 +152,9 @@ async function loadMpQR() {
 
 function downloadQR() {
   if (!qrDataUrl.value || !qrTarget.value) return
-  const prefix = qrMode.value === 'text' ? 'qrcode-text' : 'qrcode-mp'
   const a = document.createElement('a')
   a.href = qrDataUrl.value
-  a.download = `${prefix}-${qrTarget.value.exhibitId}.png`
+  a.download = `qrcode-${qrTarget.value.exhibitId}.png`
   a.click()
 }
 
@@ -253,11 +225,6 @@ onMounted(load)
       <div v-if="qrTarget" class="qr-body">
         <p class="qr-meta">{{ qrTarget.name }}（{{ qrTarget.exhibitId }}）</p>
 
-        <el-radio-group v-model="qrMode" size="small" @change="renderQR">
-          <el-radio-button value="text">普通二维码</el-radio-button>
-          <el-radio-button value="mp">小程序码</el-radio-button>
-        </el-radio-group>
-
         <div class="qr-canvas" v-loading="qrLoading">
           <el-image v-if="qrDataUrl" :src="qrDataUrl" style="width: 240px; height: 240px" />
           <el-alert v-else-if="qrError" :title="qrError" type="error" :closable="false" show-icon />
@@ -265,16 +232,9 @@ onMounted(load)
         </div>
 
         <el-alert
-          v-if="qrMode === 'text'"
           type="info"
           :closable="false"
-          title="普通二维码：小程序内「扫一扫」可直接跳转；用微信通用扫一扫会提示改用小程序扫码。未上线阶段即可用。"
-        />
-        <el-alert
-          v-else
-          type="info"
-          :closable="false"
-          title="小程序码：微信原生扫一扫也能进。需小程序已发布正式版后，游客扫码才生效。"
+          title="小程序二维码：微信原生「扫一扫」与小程序内「扫一扫」都能扫开并跳转到该展品。需小程序已发布正式版后生效。"
         />
       </div>
       <template #footer>
