@@ -1,12 +1,48 @@
-/* 海洋青蓝主题 · 色值约定（清澈海蓝 A，各页 .wxss 按此表替换）
-   primary        #0e88ab   主色：按钮/链接/标签/箭头
-   text-strong    #0d3a48   主标题
-   text-body      #37535c   正文
-   text-muted     #6a8f9c   次要文字/空状态
-   text-hint      #9fc4d0   提示/箭头
-   bg-page        #eef7fa   页面背景
-   border         #c4e2ec   边框
-   placeholder    #d5eef4   占位底
-   shadow         rgba(13,58,72,0.08) 卡片阴影
-*/
-page { background: #eef7fa; color: #37535c; }
+/* 海洋青蓝主题 · 设计变量（唯一配色来源，清澈海蓝 A）
+   命名与后台 admin/src/styles/theme.css 对齐，两端一致。
+   WXSS 支持 CSS 自定义属性，定义在 page 上可全局级联（含自定义组件）。 */
+page {
+  /* ── 品牌色板 ── */
+  --ocean-primary: #0e88ab;        /* 主色：按钮/链接/标签/箭头 */
+  --ocean-primary-dark: #0a6a86;   /* 主色加深：按下态 */
+  --ocean-primary-light: #33a6c6;  /* 主色提亮 */
+  --ocean-primary-bg: #e6f5f9;     /* 主色浅底：芯片/字号按钮底 */
+  --ocean-accent: #f2a93c;         /* 点缀橙：里程碑/强调 */
+  --ocean-text-strong: #0d3a48;    /* 主标题 */
+  --ocean-text-body: #37535c;      /* 正文 */
+  --ocean-text-muted: #6a8f9c;     /* 次要文字/空状态 */
+  --ocean-text-hint: #9fc4d0;      /* 提示/箭头 */
+  --ocean-bg-page: #eef7fa;        /* 页面背景 */
+  --ocean-surface: #ffffff;        /* 卡片/面板 */
+  --ocean-border: #c4e2ec;         /* 边框 */
+  --ocean-placeholder: #d5eef4;    /* 图片占位底 */
+  --ocean-success: #2e7d53;        /* 已参观/成功 */
+  --ocean-shadow: rgba(13, 58, 72, 0.08); /* 卡片阴影 */
+
+  /* ── 间距刻度 ── */
+  --space-xs: 12rpx;
+  --space-sm: 16rpx;
+  --space-md: 20rpx;
+  --space-lg: 30rpx;
+  --space-xl: 48rpx;
+
+  /* ── 圆角刻度 ── */
+  --radius-sm: 12rpx;
+  --radius-md: 20rpx;
+  --radius-lg: 32rpx;
+  --radius-pill: 999rpx;
+
+  /* ── 字号刻度 ── */
+  --fs-caption: 22rpx;
+  --fs-small: 26rpx;
+  --fs-body: 28rpx;
+  --fs-subtitle: 32rpx;
+  --fs-title: 40rpx;
+  --fs-display: 52rpx;
+
+  /* ── 卡片阴影成品 ── */
+  --shadow-card: 0 6rpx 24rpx var(--ocean-shadow);
+
+  background: var(--ocean-bg-page);
+  color: var(--ocean-text-body);
+}

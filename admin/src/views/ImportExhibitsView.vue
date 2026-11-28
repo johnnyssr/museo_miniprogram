@@ -48,6 +48,7 @@ import { ElMessage } from 'element-plus'
 import { saveAs } from 'file-saver'
 import { buildTemplateCsv, parseAndValidate, type ParsedRow } from '../utils/csv'
 import { fetchExhibits, createExhibitsBatch } from '../cloudbase'
+import { friendlyError } from '../utils/errors'
 
 const step = ref(1)
 const rows = ref<ParsedRow[]>([])
@@ -75,13 +76,15 @@ async function doImport() {
   try {
     const res = await createExhibitsBatch(validRows.value.map(r => r.data))
     if (res.failed.length) {
-      ElMessage.error(`导入完成：成功 ${res.ok.length}，失败 ${res.failed.length}。首个失败：${res.failed[0].error}`)
+      ElMessage.error(`导入完成：成功 ${res.ok.length}，失败 ${res.failed.length}。首个失败：${friendlyError(res.failed[0].error)}`)
     } else {
       ElMessage.success(`成功导入 ${res.ok.length} 条`)
     }
     // 导入后回到起点，并清空已解析行，避免下次校验命中过期的库内编号
     rows.value = []
     step.value = 1
+  } catch (err) {
+    ElMessage.error(friendlyError(err, '导入失败'))
   } finally { importing.value = false }
 }
 </script>

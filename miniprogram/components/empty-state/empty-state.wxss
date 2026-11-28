@@ -1,0 +1,29 @@
+/**components/empty-state/empty-state.wxss**/
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 60rpx;
+}
+.empty-icon {
+  font-size: 96rpx;
+  line-height: 1;
+  margin-bottom: var(--space-md);
+}
+.empty-text {
+  font-size: var(--fs-body);
+  color: var(--ocean-text-muted);
+  text-align: center;
+}
+.empty-cta {
+  margin-top: var(--space-lg);
+  padding: 16rpx var(--space-xl);
+  font-size: var(--fs-small);
+  color: var(--ocean-primary);
+  border: 2rpx solid var(--ocean-border);
+  border-radius: var(--radius-pill);
+}
+.empty-cta:active {
+  background: var(--ocean-primary-bg);
+}

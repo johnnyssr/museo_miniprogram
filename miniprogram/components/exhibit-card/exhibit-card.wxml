@@ -1,0 +1,13 @@
+<!--components/exhibit-card/exhibit-card.wxml-->
+<view class="exhibit-card" hover-class="exhibit-card--hover" bindtap="onTap">
+  <view class="card-img-wrap">
+    <image class="thumb" src="{{exhibit.image}}" mode="aspectFill" lazy-load />
+    <view wx:if="{{exhibit.visited}}" class="visited-mark">✓</view>
+  </view>
+  <view class="card-body">
+    <text class="card-name">{{exhibit.name}}</text>
+    <text wx:if="{{exhibit.summary}}" class="card-summary">{{exhibit.summary}}</text>
+    <view wx:if="{{exhibit.category}}" class="card-cat">{{exhibit.category}}</view>
+  </view>
+  <view class="card-arrow">›</view>
+</view>

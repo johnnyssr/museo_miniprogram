@@ -20,7 +20,7 @@
       <el-header class="shell-header">
         <div class="header-title">北部湾海洋生态守护站 · 运维后台</div>
         <el-dropdown @command="onCommand">
-          <span class="header-user">👤 管理员 ▾</span>
+          <span class="header-user">👤 {{ userName }} ▾</span>
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="logout">退出登录</el-dropdown-item>
@@ -31,7 +31,7 @@
       <el-main class="shell-main">
         <el-breadcrumb class="shell-crumb" separator="/">
           <el-breadcrumb-item :to="{ path: '/dashboard' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ crumb }}</el-breadcrumb-item>
+          <el-breadcrumb-item v-for="(c, i) in crumbs" :key="i">{{ c }}</el-breadcrumb-item>
         </el-breadcrumb>
         <router-view />
       </el-main>
@@ -40,14 +40,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { DataLine, Files, Upload, PictureFilled } from '@element-plus/icons-vue'
-import { logout } from '../cloudbase'
+import { logout, currentUserName } from '../cloudbase'
 
 const route = useRoute()
 const router = useRouter()
 const collapsed = ref(false)
+const userName = ref('管理员')
 // 展品的新增/编辑等子路由归到「展品管理」菜单项高亮
 const activeMenu = computed(() => (route.path.startsWith('/exhibits') ? '/exhibits' : route.path))
 const CRUMBS: Record<string, string> = {
@@ -58,11 +59,21 @@ const CRUMBS: Record<string, string> = {
   '/media/videos': '视频管理',
   '/media/audios': '音频管理',
 }
-const crumb = computed(() => CRUMBS[route.path] || '展品管理')
+// 动态面包屑：新增/编辑展品显示「展品管理 / 新增展品(编辑展品)」两级
+const crumbs = computed<string[]>(() => {
+  const p = route.path
+  if (p === '/exhibits/new') return ['展品管理', '新增展品']
+  if (/^\/exhibits\/.+\/edit$/.test(p)) return ['展品管理', '编辑展品']
+  return [CRUMBS[p] || '展品管理']
+})
 
 async function onCommand(cmd: string) {
   if (cmd === 'logout') { await logout(); router.push('/login') }
 }
+
+onMounted(async () => {
+  try { userName.value = await currentUserName() } catch { /* 保持默认 */ }
+})
 </script>
 
 <style scoped>

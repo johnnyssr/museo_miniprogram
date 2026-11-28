@@ -1,0 +1,74 @@
+/**components/exhibit-card/exhibit-card.wxss**/
+.exhibit-card {
+  display: flex;
+  align-items: center;
+  margin: var(--space-md) var(--space-lg) 0;
+  padding: 24rpx;
+  background: var(--ocean-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.exhibit-card--hover {
+  transform: scale(0.985);
+  box-shadow: 0 2rpx 10rpx var(--ocean-shadow);
+}
+.card-img-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.thumb {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: var(--radius-sm);
+  background: var(--ocean-placeholder);
+}
+.visited-mark {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  width: 36rpx;
+  height: 36rpx;
+  background: var(--ocean-success);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 6rpx var(--ocean-shadow);
+}
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 24rpx;
+  gap: 6rpx;
+  min-width: 0;
+}
+.card-name {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: var(--ocean-text-strong);
+}
+.card-summary {
+  font-size: var(--fs-small);
+  color: var(--ocean-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-cat {
+  align-self: flex-start;
+  margin-top: 2rpx;
+  padding: 2rpx 16rpx;
+  font-size: var(--fs-caption);
+  color: var(--ocean-primary);
+  background: var(--ocean-primary-bg);
+  border-radius: var(--radius-pill);
+}
+.card-arrow {
+  font-size: 44rpx;
+  color: var(--ocean-text-hint);
+  padding-left: var(--space-xs);
+}

@@ -5,11 +5,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadRawFile } from 'element-plus'
 import {
   fetchMedia, uploadMediaBatch, deleteMediaBatch,
-  fetchExhibits, toPreviewUrl,
+  fetchExhibits, toPreviewUrl, detachFilesFromExhibit,
 } from '../cloudbase'
 import type { Media, MediaType } from '../types/media'
 import type { Exhibit } from '../types/exhibit'
 import { countUsage, usedByExhibits } from '../utils/mediaUsage'
+import { friendlyError } from '../utils/errors'
 import { UploadFilled, VideoCamera, Headset } from '@element-plus/icons-vue'
 import MediaMatchDialog from '../components/MediaMatchDialog.vue'
 import MediaEditDialog from '../components/MediaEditDialog.vue'
@@ -32,7 +33,12 @@ const assignOpen = ref(false)
 const selected = ref<Media[]>([])
 const uploading = ref(false)
 const progress = ref(0)
+const staged = ref(0)
 const previews = ref<Record<string, string>>({}) // fileID -> 临时 url（仅图片）
+
+// 预览弹窗（图片/音频/视频通用）
+const previewOpen = ref(false)
+const previewing = ref<{ url: string; name: string } | null>(null)
 
 const filtered = computed(() =>
   list.value.filter((m) => m.name.toLowerCase().includes(keyword.value.trim().toLowerCase())),
@@ -56,32 +62,47 @@ async function load() {
       previews.value = Object.fromEntries(entries)
     }
   } catch (err) {
-    ElMessage.error(err instanceof Error ? err.message : '加载失败')
+    ElMessage.error(friendlyError(err, '加载失败'))
   } finally {
     loading.value = false
   }
 }
 
+// 一步上传：拖入/选择后短暂去抖，自动开始上传（多选会被合并为一次批量）
 const pending: File[] = []
+let autoTimer: ReturnType<typeof setTimeout> | undefined
 function collectFile(file: UploadRawFile) {
   pending.push(file)
+  staged.value = pending.length
+  if (autoTimer) clearTimeout(autoTimer)
+  autoTimer = setTimeout(runUpload, 200)
   return false
 }
 async function runUpload() {
-  if (!pending.length) return
+  if (!pending.length || uploading.value) return
   const files = pending.splice(0)
+  staged.value = 0
   uploading.value = true
   progress.value = 0
   try {
     const res = await uploadMediaBatch(files, (d, t) => (progress.value = Math.round((d / t) * 100)))
     if (res.failed.length) {
-      ElMessage.warning(`上传完成：成功 ${res.ok.length}，失败 ${res.failed.length}（${res.failed[0].error}）`)
+      // 打印原始报错，便于在控制台定位真实失败原因（权限 / 集合 / 存储规则等）
+      console.error('[媒体上传失败]', res.failed.map((f) => f.error))
+      ElMessage.warning(`上传完成：成功 ${res.ok.length}，失败 ${res.failed.length}（${friendlyError(res.failed[0].error)}）`)
     } else {
       ElMessage.success(`上传成功 ${res.ok.length} 个`)
     }
     await load()
+  } catch (err) {
+    ElMessage.error(friendlyError(err, '上传失败'))
   } finally {
     uploading.value = false
+    // 上传期间若又有文件入列，重新排期，避免这批文件被滞留不传
+    if (pending.length) {
+      if (autoTimer) clearTimeout(autoTimer)
+      autoTimer = setTimeout(runUpload, 200)
+    }
   }
 }
 
@@ -100,7 +121,7 @@ async function confirmUsage(items: Media[]): Promise<boolean> {
       .join('\n')
     try {
       await ElMessageBox.confirm(
-        `以下媒体正被展品引用，删除后展品将失去该资源：\n\n${lines}\n\n确认删除？`,
+        `以下媒体正被展品引用，删除后将同时从这些展品中移除引用：\n\n${lines}\n\n确认删除？`,
         '删除确认', { type: 'warning', confirmButtonText: '仍然删除', cancelButtonText: '取消' },
       )
     } catch {
@@ -113,13 +134,41 @@ async function confirmUsage(items: Media[]): Promise<boolean> {
 async function onDeleteSelected() {
   if (!selected.value.length) return
   if (!(await confirmUsage(selected.value))) return
-  const res = await deleteMediaBatch(selected.value)
-  if (res.failed.length) {
-    ElMessage.warning(`删除完成：成功 ${res.ok.length}，失败 ${res.failed.length}（${res.failed[0].error}）`)
-  } else {
-    ElMessage.success(`已删除 ${res.ok.length} 个`)
+  try {
+    // 先从引用这些媒体的展品中剔除引用，避免删除后展品残留失效 fileID。
+    // 按展品聚合所有待移除的 fileID，一次性写入——否则对同一展品多次写库会相互覆盖。
+    const byExhibit = new Map<string, { ex: Exhibit; ids: string[] }>()
+    for (const m of selected.value) {
+      for (const ex of usedByExhibits(m.fileID, exhibits.value)) {
+        if (!ex._id) continue
+        const entry = byExhibit.get(ex._id) || { ex, ids: [] }
+        entry.ids.push(m.fileID)
+        byExhibit.set(ex._id, entry)
+      }
+    }
+    for (const { ex, ids } of byExhibit.values()) {
+      try { await detachFilesFromExhibit(ex, ids, mediaType.value) } catch { /* 单个展品失败不阻断整体 */ }
+    }
+    const res = await deleteMediaBatch(selected.value)
+    if (res.failed.length) {
+      ElMessage.warning(`删除完成：成功 ${res.ok.length}，失败 ${res.failed.length}（${friendlyError(res.failed[0].error)}）`)
+    } else {
+      ElMessage.success(`已删除 ${res.ok.length} 个`)
+    }
+    await load()
+  } catch (err) {
+    ElMessage.error(friendlyError(err, '删除失败'))
   }
-  await load()
+}
+
+async function previewOne(m: Media) {
+  try {
+    const url = previews.value[m.fileID] || (await toPreviewUrl(m.fileID))
+    previewing.value = { url, name: m.name }
+    previewOpen.value = true
+  } catch (err) {
+    ElMessage.error(friendlyError(err, '预览失败'))
+  }
 }
 
 function toggleSelect(m: Media) {
@@ -148,7 +197,7 @@ watch(mediaType, load, { immediate: true })
 </script>
 
 <template>
-  <div class="media-lib" v-loading="loading">
+  <div class="media-lib">
     <div class="lib-head">
       <h2 class="lib-title">{{ label }}管理</h2>
       <div class="lib-actions">
@@ -166,16 +215,19 @@ watch(mediaType, load, { immediate: true })
     >
       <div class="upload-inner">
         <el-icon class="upload-icon"><UploadFilled /></el-icon>
-        <div>把{{ label }}拖到这里，或<em>点击选择</em>（可多选）</div>
+        <div>把{{ label }}拖到这里，或<em>点击选择</em>（可多选，选好自动上传）</div>
       </div>
     </el-upload>
-    <div class="upload-bar">
-      <el-button type="primary" :loading="uploading" @click="runUpload">开始上传</el-button>
-      <el-progress v-if="uploading" :percentage="progress" style="flex: 1" />
+    <div v-if="uploading || staged" class="upload-bar">
+      <span v-if="staged && !uploading" class="muted">已选 {{ staged }} 个，准备上传…</span>
+      <template v-if="uploading">
+        <span class="muted">上传中</span>
+        <el-progress :percentage="progress" style="flex: 1" />
+      </template>
     </div>
 
     <!-- 选择工具条：全选 + 选中后操作 -->
-    <div class="sel-bar">
+    <div class="selection-bar">
       <el-checkbox
         :model-value="allChecked" :indeterminate="selected.length > 0 && !allChecked"
         :disabled="!filtered.length" @change="toggleAll"
@@ -196,29 +248,41 @@ watch(mediaType, load, { immediate: true })
       </span>
     </div>
 
-    <div v-if="!filtered.length" class="lib-empty">暂无{{ label }}，先上传一些吧</div>
-    <div v-else class="lib-grid">
-      <div
-        v-for="m in filtered" :key="m._id"
-        class="card" :class="{ 'card-sel': isSelected(m) }"
-        @click="toggleSelect(m)"
-      >
-        <div class="thumb">
-          <el-image
-            v-if="mediaType === 'image' && previews[m.fileID]"
-            :src="previews[m.fileID]" fit="cover" style="width: 100%; height: 100%"
-          />
-          <el-icon v-else-if="mediaType === 'video'" class="thumb-icon"><VideoCamera /></el-icon>
-          <el-icon v-else class="thumb-icon"><Headset /></el-icon>
-          <el-checkbox class="card-check" :model-value="isSelected(m)" @click.stop="toggleSelect(m)" />
-        </div>
-        <div class="card-name" :title="m.name">{{ m.name }}</div>
-        <div class="card-meta">{{ fmtSize(m.size) }}</div>
-        <div class="card-usage" :class="{ used: countUsage(m.fileID, exhibits) > 0 }">
-          {{ usageText(m) }}
+    <el-skeleton v-if="loading && !list.length" :rows="5" animated class="lib-skeleton" />
+    <template v-else>
+      <el-empty v-if="!filtered.length" :description="keyword ? '没有匹配的' + label : '暂无' + label + '，把文件拖到上方即可上传'" />
+      <div v-else class="lib-grid" v-loading="loading">
+        <div
+          v-for="m in filtered" :key="m._id"
+          class="card" :class="{ 'card-sel': isSelected(m) }"
+          @click="toggleSelect(m)"
+        >
+          <div class="thumb">
+            <el-image
+              v-if="mediaType === 'image' && previews[m.fileID]"
+              :src="previews[m.fileID]" fit="cover" style="width: 100%; height: 100%"
+            />
+            <el-icon v-else-if="mediaType === 'video'" class="thumb-icon"><VideoCamera /></el-icon>
+            <el-icon v-else class="thumb-icon"><Headset /></el-icon>
+            <el-checkbox class="card-check" :model-value="isSelected(m)" @click.stop="toggleSelect(m)" />
+            <el-button class="card-preview" size="small" @click.stop="previewOne(m)">预览</el-button>
+          </div>
+          <div class="card-name" :title="m.name">{{ m.name }}</div>
+          <div class="card-meta">{{ fmtSize(m.size) }}</div>
+          <div class="card-usage" :class="{ used: countUsage(m.fileID, exhibits) > 0 }">
+            {{ usageText(m) }}
+          </div>
         </div>
       </div>
-    </div>
+    </template>
+
+    <el-dialog v-model="previewOpen" :title="previewing?.name || '预览'" width="520">
+      <div class="preview-box" v-if="previewing">
+        <el-image v-if="mediaType === 'image'" :src="previewing.url" fit="contain" style="width: 100%; max-height: 60vh" />
+        <audio v-else-if="mediaType === 'audio'" :src="previewing.url" controls style="width: 100%" />
+        <video v-else :src="previewing.url" controls style="width: 100%; max-height: 60vh" />
+      </div>
+    </el-dialog>
 
     <MediaMatchDialog
       v-model="matchOpen"
@@ -250,21 +314,22 @@ watch(mediaType, load, { immediate: true })
 .lib-upload { display: block; }
 .upload-inner { padding: 16px; color: var(--ocean-text-body); }
 .upload-icon { font-size: 40px; color: var(--ocean-primary); }
-.upload-bar { display: flex; align-items: center; gap: 12px; margin: 12px 0 12px; }
-.sel-bar {
+.upload-bar { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+.selection-bar {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 8px 12px; margin-bottom: 16px; min-height: 40px;
   background: var(--ocean-primary-bg); border-radius: 8px;
 }
 .sel-count { font-size: 13px; color: var(--ocean-text-strong); font-weight: 600; }
 .sel-hint { font-size: 12px; color: var(--ocean-text-muted); }
-.lib-empty { text-align: center; color: var(--ocean-text-muted); padding: 48px 0; }
+.lib-skeleton { padding: 16px 0; }
 .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
 .card {
   border: 1px solid var(--ocean-border); border-radius: 10px; padding: 8px;
   cursor: pointer; transition: box-shadow .15s; background: var(--ocean-surface);
 }
 .card:hover { box-shadow: 0 2px 10px var(--ocean-shadow); }
+.card:hover .card-preview { opacity: 1; }
 .card-sel { border-color: var(--ocean-primary); box-shadow: 0 0 0 2px var(--ocean-primary-bg); }
 .thumb {
   position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden;
@@ -272,8 +337,10 @@ watch(mediaType, load, { immediate: true })
 }
 .thumb-icon { font-size: 44px; color: var(--ocean-primary); }
 .card-check { position: absolute; top: 6px; left: 6px; }
+.card-preview { position: absolute; bottom: 6px; right: 6px; opacity: 0; transition: opacity .15s; }
 .card-name { font-size: 13px; color: var(--ocean-text-strong); margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-meta { font-size: 12px; color: var(--ocean-text-muted); }
 .card-usage { font-size: 12px; color: var(--ocean-text-hint); }
 .card-usage.used { color: var(--ocean-primary); }
+.preview-box { display: flex; align-items: center; justify-content: center; }
 </style>

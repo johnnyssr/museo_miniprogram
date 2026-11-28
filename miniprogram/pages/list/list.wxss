@@ -1,153 +1,158 @@
 /**list.wxss**/
 .page {
   height: 100vh;
-  background: #eef7fa;
   box-sizing: border-box;
 }
 
 /* 顶部标题 + 进度 */
 .page-header {
-  padding: 40rpx 30rpx 0;
+  padding: 40rpx var(--space-lg) 0;
 }
 .page-title {
-  font-size: 40rpx;
+  font-size: var(--fs-title);
   font-weight: bold;
-  color: #0d3a48;
+  color: var(--ocean-text-strong);
 }
-.progress-wrap {
-  margin-top: 16rpx;
-  margin-bottom: 4rpx;
+
+/* 打卡进度卡片 */
+.progress-card {
+  margin-top: var(--space-md);
+  padding: 24rpx var(--space-lg);
+  background: var(--ocean-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
 }
-.progress-text {
-  font-size: 24rpx;
-  color: #6a8f9c;
-  margin-bottom: 8rpx;
-  display: block;
+.progress-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+.progress-label {
+  font-size: var(--fs-small);
+  font-weight: bold;
+  color: var(--ocean-text-strong);
+}
+.progress-count {
+  font-size: var(--fs-small);
+  color: var(--ocean-text-muted);
 }
 .progress-bar-bg {
-  height: 16rpx;
-  background: #d5eef4;
-  border-radius: 8rpx;
+  position: relative;
+  height: 18rpx;
+  background: var(--ocean-placeholder);
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 .progress-bar-fill {
   height: 100%;
-  background: #0e88ab;
-  border-radius: 8rpx;
-  transition: width 0.3s;
+  background: linear-gradient(90deg, var(--ocean-primary), var(--ocean-primary-light));
+  border-radius: var(--radius-pill);
+  transition: width 0.4s ease;
+}
+.tick {
+  position: absolute;
+  top: 0;
+  width: 2rpx;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.7);
+}
+.progress-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-xs);
+}
+.progress-pct {
+  font-size: var(--fs-caption);
+  color: var(--ocean-text-muted);
+}
+.progress-share {
+  font-size: var(--fs-caption);
+  color: var(--ocean-primary);
+  padding: 6rpx 20rpx;
+  background: var(--ocean-primary-bg);
+  border-radius: var(--radius-pill);
 }
 
 /* 搜索框 */
 .search-wrap {
-  margin: 20rpx 30rpx 0;
+  margin: var(--space-md) var(--space-lg) 0;
 }
 .search-input {
-  background: #fff;
-  border-radius: 40rpx;
-  padding: 0 30rpx;
+  background: var(--ocean-surface);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-lg);
   height: 80rpx;
-  font-size: 28rpx;
-  color: #0d3a48;
+  font-size: var(--fs-body);
+  color: var(--ocean-text-strong);
   width: 100%;
   box-sizing: border-box;
 }
 .search-placeholder {
-  color: #9fc4d0;
+  color: var(--ocean-text-hint);
 }
 
 /* 分类芯片 */
 .cat-scroll {
-  margin-top: 20rpx;
+  margin-top: var(--space-md);
   white-space: nowrap;
 }
 .cat-row {
   display: flex;
-  padding: 0 30rpx;
-  gap: 16rpx;
+  padding: 0 var(--space-lg);
+  gap: var(--space-sm);
 }
 .cat-chip {
   display: inline-flex;
   align-items: center;
   padding: 10rpx 28rpx;
-  background: #fff;
-  border-radius: 40rpx;
-  font-size: 26rpx;
-  color: #0d3a48;
+  background: var(--ocean-surface);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-small);
+  color: var(--ocean-text-strong);
   white-space: nowrap;
   flex-shrink: 0;
 }
 .cat-chip--active {
-  background: #0e88ab;
+  background: var(--ocean-primary);
   color: #fff;
-}
-
-/* 展品卡片 */
-.empty {
-  display: flex;
-  justify-content: center;
-  padding: 120rpx 0;
-  color: #6a8f9c;
-  font-size: 30rpx;
-}
-.card {
-  display: flex;
-  align-items: center;
-  margin: 20rpx 30rpx 0;
-  padding: 24rpx;
-  background: #fff;
-  border-radius: 20rpx;
-  box-shadow: 0 6rpx 24rpx rgba(13, 58, 72, 0.08);
-}
-.card-img-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
-.thumb {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: 16rpx;
-  background: #d5eef4;
-}
-.visited-mark {
-  position: absolute;
-  top: -8rpx;
-  right: -8rpx;
-  width: 36rpx;
-  height: 36rpx;
-  background: #2e7d53;
-  color: #fff;
-  border-radius: 50%;
-  font-size: 20rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.card-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  margin-left: 24rpx;
-  gap: 6rpx;
-}
-.card-name {
-  font-size: 34rpx;
-  font-weight: bold;
-  color: #0d3a48;
-}
-.card-summary {
-  font-size: 26rpx;
-  color: #0e88ab;
-}
-.card-cat {
-  font-size: 22rpx;
-  color: #9fc4d0;
-}
-.card-arrow {
-  font-size: 44rpx;
-  color: #9fc4d0;
-  padding-left: 12rpx;
 }
 
 .list-bottom {
-  height: 40rpx;
+  height: 160rpx;
+}
+
+/* 继续扫码悬浮按钮 */
+.scan-fab {
+  position: fixed;
+  right: var(--space-lg);
+  bottom: 56rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 20rpx 36rpx;
+  background: var(--ocean-primary);
+  color: #fff;
+  font-size: var(--fs-small);
+  font-weight: bold;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8rpx 24rpx rgba(14, 136, 171, 0.4);
+  z-index: 20;
+}
+.scan-fab--hover {
+  background: var(--ocean-primary-dark);
+}
+.scan-fab-icon {
+  font-size: 30rpx;
+  line-height: 1;
+}
+
+/* 离屏画布（打卡卡片） */
+.hidden-canvas {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 600px;
+  height: 800px;
 }
