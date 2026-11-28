@@ -1,4 +1,9 @@
 {
-  "usingComponents": {},
-  "navigationBarTitleText": "展品详情"
+  "usingComponents": {
+    "audio-player": "/components/audio-player/audio-player",
+    "empty-state": "/components/empty-state/empty-state"
+  },
+  "navigationBarTitleText": "展品导览",
+  "navigationBarBackgroundColor": "#0e88ab",
+  "navigationBarTextStyle": "white"
 }

@@ -1,4 +1,7 @@
 {
-  "usingComponents": {},
+  "usingComponents": {
+    "exhibit-card": "/components/exhibit-card/exhibit-card",
+    "empty-state": "/components/empty-state/empty-state"
+  },
   "navigationBarTitleText": "全部展品"
 }

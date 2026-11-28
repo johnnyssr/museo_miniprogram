@@ -1,0 +1,38 @@
+.dock {
+  padding: 12rpx 20rpx;
+  padding-bottom: calc(12rpx + env(safe-area-inset-bottom));
+  background: var(--ocean-bg-page);
+  border-top: 1px solid var(--ocean-border);
+}
+.player {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 22rpx;
+  color: #fff;
+  background: var(--ocean-text-strong);
+  border-radius: 24rpx;
+}
+.player.idle { background: var(--ocean-primary-bg); color: var(--ocean-text-strong); }
+.player.idle .play-disc { background: var(--ocean-primary); color: #fff; }
+.player.idle .track-info { color: var(--ocean-text-muted); }
+.player.idle .expand { color: var(--ocean-primary); }
+.player.idle .controls { border-top-color: var(--ocean-border); }
+.player.idle .step { color: var(--ocean-text-strong); }
+.player.idle .step[disabled] { color: var(--ocean-text-muted); }
+.main-row, .play-action, .play-disc, .expand, .controls { display: flex; align-items: center; }
+.main-row { min-height: 112rpx; }
+.play-action { flex: 1; gap: 20rpx; min-height: 112rpx; }
+.play-disc { width: 72rpx; height: 72rpx; border-radius: 50%; background: var(--ocean-primary-bg); color: var(--ocean-text-strong); justify-content: center; }
+.play-mark { width: 0; height: 0; margin-left: 5rpx; border: solid transparent; border-width: 13rpx 0 13rpx 20rpx; border-left-color: currentColor; }
+.pause-mark { width: 9rpx; height: 24rpx; border: solid currentColor; border-width: 0 6rpx; }
+.track { display: flex; flex-direction: column; gap: 3rpx; }
+.track-title { font-size: 29rpx; font-weight: 600; }
+.track-info { color: var(--ocean-text-hint); font-size: 22rpx; font-variant-numeric: tabular-nums; }
+.expand { gap: 14rpx; padding: 22rpx 8rpx 22rpx 24rpx; color: var(--ocean-text-hint); font-size: 24rpx; }
+.caret { width: 12rpx; height: 12rpx; border: solid currentColor; border-width: 2rpx 2rpx 0 0; transform: rotate(-45deg); }
+.caret.down { transform: rotate(135deg); }
+.controls { padding: 4rpx 0 12rpx; border-top: 1px solid rgba(255, 255, 255, .15); }
+.slider { flex: 1; min-width: 0; margin: 0 20rpx; }
+.step, .step[disabled] { width: auto; margin: 0; padding: 18rpx 6rpx; background: transparent; color: #fff; line-height: 1.5; font-size: 24rpx; }
+.step[disabled] { color: var(--ocean-text-hint); }
+.step::after { border: none; }

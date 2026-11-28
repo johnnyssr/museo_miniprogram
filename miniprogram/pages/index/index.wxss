@@ -1,7 +1,6 @@
 /**index.wxss**/
 page {
   height: 100vh;
-  background: #eef7fa;
 }
 .container {
   display: flex;
@@ -14,30 +13,33 @@ page {
   margin-bottom: 120rpx;
 }
 .title {
-  font-size: 52rpx;
+  font-size: var(--fs-display);
   font-weight: bold;
-  color: #0d3a48;
+  color: var(--ocean-text-strong);
 }
 .subtitle {
-  margin-top: 20rpx;
-  font-size: 28rpx;
-  color: #6a8f9c;
+  margin-top: var(--space-md);
+  font-size: var(--fs-body);
+  color: var(--ocean-text-muted);
 }
 .scan-btn {
   width: 70%;
-  background: #0e88ab;
+  background: var(--ocean-primary);
   color: #fff;
-  border-radius: 56rpx;
-  font-size: 48rpx;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-title);
   font-weight: bold;
   padding: 28rpx 0;
   line-height: 1.4;
 }
+.scan-btn:active {
+  background: var(--ocean-primary-dark);
+}
 .browse-link {
-  margin-top: 40rpx;
-  font-size: 40rpx;
-  color: #0e88ab;
-  padding: 24rpx 48rpx;
-  border: 2rpx solid #c4e2ec;
-  border-radius: 48rpx;
+  margin-top: var(--space-xl);
+  font-size: var(--fs-subtitle);
+  color: var(--ocean-primary);
+  padding: 24rpx var(--space-xl);
+  border: 2rpx solid var(--ocean-border);
+  border-radius: var(--radius-pill);
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { uploadMediaToLibrary, toPreviewUrl } from '../cloudbase'
 import MediaPickerDialog from './MediaPickerDialog.vue'
@@ -16,6 +16,15 @@ const mode = ref<'upload' | 'library' | 'url'>('upload')
 const pickerOpen = ref(false)
 const uploading = ref(false)
 const previewUrl = ref('')
+
+// 外链校验：非空且既不是 http(s):// 也不是 cloud:// 时提示
+const urlInvalid = computed(
+  () =>
+    mode.value === 'url' &&
+    !!props.modelValue &&
+    !/^https?:\/\//i.test(props.modelValue) &&
+    !props.modelValue.startsWith('cloud://'),
+)
 
 // 根据当前值刷新预览（cloud:// 需换临时 URL）
 async function refreshPreview() {
@@ -77,6 +86,8 @@ function onUrlInput(val: string) {
       />
     </div>
 
+    <div v-if="urlInvalid" class="url-warn">请输入 https:// 开头的有效链接（或 cloud:// 文件）</div>
+
     <!-- 预览 / 当前值 -->
     <div v-if="modelValue" class="media-preview">
       <el-image
@@ -110,6 +121,11 @@ function onUrlInput(val: string) {
   font-size: 12px;
   color: var(--ocean-text-muted);
   word-break: break-all;
+  margin-top: 4px;
+}
+.url-warn {
+  font-size: 12px;
+  color: var(--ocean-danger);
   margin-top: 4px;
 }
 </style>

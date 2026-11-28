@@ -1,9 +1,12 @@
 // list.ts —— 展品列表页
 import { getAllExhibits } from '../../services/exhibit'
 import { Exhibit } from '../../models/exhibit'
-import { getVisited } from '../../utils/visitHistory'
+import { getVisited, takeNewMilestone } from '../../utils/visitHistory'
+import { drawAndSaveCheckinCard } from '../../utils/shareCard'
+import { scanToExhibit } from '../../utils/scan'
 
 const CAT_ORDER = ['全部', '鱼类', '珊瑚', '哺乳类', '贝类', '藻类', '其他']
+const BRAND = '北部湾海洋生态守护站'
 
 type ExhibitRow = Exhibit & { visited: boolean }
 
@@ -16,6 +19,7 @@ Component({
     searchKeyword: '',
     visitedCount: 0,
     totalCount: 0,
+    percent: 0,
   },
 
   methods: {
@@ -50,9 +54,14 @@ Component({
       this._refresh()
     },
 
-    onTapExhibit(e: WechatMiniprogram.TouchEvent) {
-      const id = e.currentTarget.dataset.id as string
-      wx.navigateTo({ url: `/pages/exhibit/exhibit?id=${id}` })
+    onCardTap(e: WechatMiniprogram.CustomEvent<{ id?: string }>) {
+      const id = e.detail.id
+      if (id) wx.navigateTo({ url: `/pages/exhibit/exhibit?id=${id}` })
+    },
+
+    // 继续扫码：扫下一件展品
+    onScan() {
+      scanToExhibit()
     },
 
     _refresh() {
@@ -76,8 +85,59 @@ Component({
         ...e,
         visited: visited.includes(e.id),
       }))
+      const total = allList.length
       const visitedCount = visited.filter((id) => allList.some((e) => e.id === id)).length
-      this.setData({ filteredList, visitedCount })
+      const percent = total > 0 ? Math.round((visitedCount * 100) / total) : 0
+      this.setData({ filteredList, visitedCount, percent })
+
+      // 达成新里程碑时庆祝（每个里程碑仅一次）
+      const milestone = takeNewMilestone(visitedCount, total)
+      if (milestone) this._celebrate(milestone)
+    },
+
+    _celebrate(pct: number) {
+      if (pct >= 100) {
+        wx.showModal({
+          title: '🎉 全部打卡完成！',
+          content: '你已集齐全部展品，成为海洋生态守护者！要生成打卡卡片留作纪念吗？',
+          confirmText: '生成卡片',
+          cancelText: '稍后',
+          success: (r) => {
+            if (r.confirm) this.onMakeCard()
+          },
+        })
+      } else {
+        wx.showToast({ title: `已打卡 ${pct}%，继续加油！`, icon: 'none' })
+      }
+    },
+
+    onMakeCard() {
+      const { visitedCount, totalCount } = this.data
+      this.createSelectorQuery()
+        .select('#checkinCanvas')
+        .fields({ node: true, size: true })
+        .exec((res) => {
+          const node = res && res[0] && res[0].node
+          if (!node) {
+            wx.showToast({ title: '当前环境不支持生成', icon: 'none' })
+            return
+          }
+          drawAndSaveCheckinCard(node, {
+            brand: BRAND,
+            visited: visitedCount,
+            total: totalCount,
+          }).catch(() => {
+            /* 失败提示已在工具内处理 */
+          })
+        })
+    },
+
+    onShareAppMessage() {
+      return { title: `${BRAND}讲解`, path: '/pages/list/list' }
+    },
+
+    onShareTimeline() {
+      return { title: `${BRAND}讲解` }
     },
   },
 })

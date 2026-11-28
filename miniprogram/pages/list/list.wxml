@@ -1,13 +1,23 @@
 <!--list.wxml-->
 <scroll-view scroll-y class="page">
 
-  <!-- 顶部：标题 + 打卡进度 -->
+  <!-- 顶部：标题 + 打卡进度卡片 -->
   <view class="page-header">
     <text class="page-title">全部展品</text>
-    <view wx:if="{{totalCount > 0}}" class="progress-wrap">
-      <text class="progress-text">已参观 {{visitedCount}} / {{totalCount}}</text>
+    <view wx:if="{{totalCount > 0}}" class="progress-card">
+      <view class="progress-top">
+        <text class="progress-label">🐚 打卡进度</text>
+        <text class="progress-count">{{visitedCount}} / {{totalCount}}</text>
+      </view>
       <view class="progress-bar-bg">
-        <view class="progress-bar-fill" style="width: {{totalCount > 0 ? visitedCount * 100 / totalCount : 0}}%" />
+        <view class="progress-bar-fill" style="width: {{percent}}%"></view>
+        <view class="tick" style="left: 25%"></view>
+        <view class="tick" style="left: 50%"></view>
+        <view class="tick" style="left: 75%"></view>
+      </view>
+      <view class="progress-bottom">
+        <text class="progress-pct">{{percent}}%</text>
+        <text class="progress-share" bindtap="onMakeCard">生成打卡卡片</text>
       </view>
     </view>
   </view>
@@ -37,29 +47,29 @@
   </scroll-view>
 
   <!-- 展品列表 -->
-  <view wx:if="{{filteredList.length === 0}}" class="empty">
-    <text>暂无展品</text>
-  </view>
+  <empty-state
+    wx:if="{{filteredList.length === 0}}"
+    icon="🐚"
+    text="{{searchKeyword ? '没有匹配“' + searchKeyword + '”的展品' : '暂无展品'}}"
+  />
 
-  <view
+  <exhibit-card
     wx:for="{{filteredList}}"
     wx:key="id"
-    class="card"
-    data-id="{{item.id}}"
-    bindtap="onTapExhibit"
-  >
-    <view class="card-img-wrap">
-      <image class="thumb" src="{{item.image}}" mode="aspectFill" />
-      <view wx:if="{{item.visited}}" class="visited-mark">✓</view>
-    </view>
-    <view class="card-body">
-      <text class="card-name">{{item.name}}</text>
-      <text wx:if="{{item.summary}}" class="card-summary">{{item.summary}}</text>
-      <text wx:if="{{item.category}}" class="card-cat">{{item.category}}</text>
-    </view>
-    <view class="card-arrow">›</view>
-  </view>
+    exhibit="{{item}}"
+    bindtap="onCardTap"
+  />
 
   <view class="list-bottom" />
 
+  <!-- 离屏画布：用于生成打卡卡片 -->
+  <canvas type="2d" id="checkinCanvas" class="hidden-canvas"></canvas>
+
 </scroll-view>
+
+<!-- 继续扫码悬浮按钮 -->
+<view class="scan-fab" hover-class="scan-fab--hover" bindtap="onScan">
+  <text class="scan-fab-icon">⌞⌝</text>
+  <text>继续扫码</text>
+</view>
+

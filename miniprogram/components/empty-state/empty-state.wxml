@@ -1,0 +1,6 @@
+<!--components/empty-state/empty-state.wxml-->
+<view class="empty-state">
+  <view class="empty-icon">{{icon}}</view>
+  <text class="empty-text">{{text}}</text>
+  <view wx:if="{{ctaText}}" class="empty-cta" bindtap="onCta">{{ctaText}}</view>
+</view>

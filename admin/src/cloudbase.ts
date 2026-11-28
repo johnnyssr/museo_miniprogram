@@ -37,6 +37,14 @@ export async function currentUserId(): Promise<string | null> {
   return data.user.id ?? null
 }
 
+/** 已登录用户的展示名（用户名 / 昵称，回退「管理员」）。 */
+export async function currentUserName(): Promise<string> {
+  const { data, error } = await auth.getUser()
+  const u = (data?.user ?? {}) as { username?: string; name?: string; nickName?: string }
+  if (error || !data?.user) return '管理员'
+  return u.username || u.name || u.nickName || '管理员'
+}
+
 // ---- 展品读（复用现有只读云函数 getExhibits）----
 
 export async function fetchExhibits(): Promise<Exhibit[]> {
@@ -230,12 +238,21 @@ export async function attachMediaToExhibit(exhibit: Exhibit, fileID: string, typ
 
 /** 把某媒体从展品移除：图片从 images 删掉；音/视频仅当当前值等于该文件时清空。 */
 export async function detachMediaFromExhibit(exhibit: Exhibit, fileID: string, type: MediaType): Promise<void> {
+  return detachFilesFromExhibit(exhibit, [fileID], type)
+}
+
+/**
+ * 一次性从展品移除多个 fileID（按展品聚合后单次写入），避免逐个移除时
+ * 基于同一内存对象多次写库相互覆盖，导致已删文件被重新写回（悬空引用）。
+ */
+export async function detachFilesFromExhibit(exhibit: Exhibit, fileIDs: string[], type: MediaType): Promise<void> {
+  const remove = new Set(fileIDs)
   if (type === 'image') {
-    const images = exhibitImages(exhibit).filter((u) => u !== fileID)
+    const images = exhibitImages(exhibit).filter((u) => !remove.has(u))
     await updateExhibit({ _id: exhibit._id, images } as unknown as Exhibit)
   } else {
     const field = type === 'audio' ? 'audioUrl' : 'videoUrl'
-    if ((exhibit[field] as string) !== fileID) return
+    if (!remove.has(exhibit[field] as string)) return
     await updateExhibit({ _id: exhibit._id, [field]: '' } as unknown as Exhibit)
   }
 }

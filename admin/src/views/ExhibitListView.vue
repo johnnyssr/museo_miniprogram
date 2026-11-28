@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Refresh } from '@element-plus/icons-vue'
 import QRCode from 'qrcode'
 import {
   fetchExhibits,
@@ -12,6 +13,8 @@ import {
 } from '../cloudbase'
 import type { Exhibit } from '../types/exhibit'
 import { exhibitImages } from '../types/exhibit'
+import { CATEGORIES } from '../constants/categories'
+import { friendlyError } from '../utils/errors'
 import { collectQrCodes, exportQrZip, printQrSheet } from '../utils/qrExport'
 
 const router = useRouter()
@@ -20,30 +23,48 @@ const rows = ref<Array<Exhibit & { _thumb?: string }>>([])
 
 // 列表筛选 / 排序 / 分页（数据量小，全部在已加载的 rows 上做客户端处理）
 const keyword = ref('')
-const sortBy = ref<'exhibitId' | 'name'>('exhibitId')
+const categoryFilter = ref('')
+const sortBy = ref<'exhibitId' | 'name' | 'category'>('exhibitId')
+const sortDir = ref<'asc' | 'desc'>('asc')
 const page = ref(1)
 const pageSize = ref(20)
 
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
+  const cat = categoryFilter.value
+  const dir = sortDir.value === 'asc' ? 1 : -1
   return rows.value
     .filter(e => !kw || e.name.toLowerCase().includes(kw) || e.exhibitId.toLowerCase().includes(kw))
+    .filter(e => !cat || (e.category || '') === cat)
     .slice()
-    .sort((a, b) => String(a[sortBy.value]).localeCompare(String(b[sortBy.value]), 'zh'))
+    .sort((a, b) => dir * String(a[sortBy.value] ?? '').localeCompare(String(b[sortBy.value] ?? ''), 'zh'))
 })
+
+// 筛选条件变化时回到第 1 页，避免停留在空白页
+watch([keyword, categoryFilter], () => { page.value = 1 })
+
+// 列头排序切换：order 为 null 时恢复默认（按编号升序）
+function onSortChange({ prop, order }: { prop: string; order: string | null }) {
+  if (!order || !prop) {
+    sortBy.value = 'exhibitId'
+    sortDir.value = 'asc'
+    return
+  }
+  sortBy.value = prop as typeof sortBy.value
+  sortDir.value = order === 'ascending' ? 'asc' : 'desc'
+}
 
 const paged = computed(() => {
   const start = (page.value - 1) * pageSize.value
   return filtered.value.slice(start, start + pageSize.value)
 })
 
-// 多选与批量操作（本任务只建骨架，实际功能在后续任务填充）
+// 多选与批量操作
 const selected = ref<Exhibit[]>([])
 function onSelectionChange(sel: Exhibit[]) {
   selected.value = sel
 }
 
-// 空实现，后续任务填充
 async function onBatchDelete() {
   try {
     await ElMessageBox.confirm(
@@ -53,13 +74,17 @@ async function onBatchDelete() {
   } catch {
     return // 用户取消
   }
-  const res = await deleteExhibitsBatch(selected.value)
-  if (res.failed.length) {
-    ElMessage.error(`删除完成：成功 ${res.ok.length}，失败 ${res.failed.length}。首个失败原因：${res.failed[0].error}`)
-  } else {
-    ElMessage.success(`已删除 ${res.ok.length} 条`)
+  try {
+    const res = await deleteExhibitsBatch(selected.value)
+    if (res.failed.length) {
+      ElMessage.error(`删除完成：成功 ${res.ok.length}，失败 ${res.failed.length}。首个失败原因：${friendlyError(res.failed[0].error)}`)
+    } else {
+      ElMessage.success(`已删除 ${res.ok.length} 条`)
+    }
+    await load()
+  } catch (err) {
+    ElMessage.error(friendlyError(err, '批量删除失败'))
   }
-  await load()
 }
 async function onBatchQr() {
   const action = await ElMessageBox.confirm(
@@ -69,13 +94,18 @@ async function onBatchQr() {
   ).then(() => 'zip').catch((a) => a === 'cancel' ? 'print' : 'abort')
   if (action === 'abort') return
 
-  const loading = ElMessage({ message: '正在生成二维码…', duration: 0 })
-  const { ok, failed } = await collectQrCodes(selected.value)
-  loading.close()
-  if (!ok.length) { ElMessage.error('二维码生成全部失败'); return }
-  if (action === 'zip') await exportQrZip(ok)
-  else printQrSheet(ok)
-  if (failed.length) ElMessage.warning(`${failed.length} 个生成失败，已跳过`)
+  const msg = ElMessage({ message: '正在生成二维码…', duration: 0 })
+  try {
+    const { ok, failed } = await collectQrCodes(selected.value)
+    if (!ok.length) { ElMessage.error('二维码生成全部失败'); return }
+    if (action === 'zip') await exportQrZip(ok)
+    else printQrSheet(ok)
+    if (failed.length) ElMessage.warning(`${failed.length} 个生成失败，已跳过`)
+  } catch (err) {
+    ElMessage.error(friendlyError(err, '二维码导出失败'))
+  } finally {
+    msg.close()
+  }
 }
 
 // 二维码弹窗状态
@@ -95,7 +125,7 @@ async function load() {
       list.map(async (e) => ({ ...e, _thumb: await toPreviewUrl(exhibitImages(e)[0] || '') })),
     )
   } catch (err) {
-    ElMessage.error(err instanceof Error ? err.message : '加载失败')
+    ElMessage.error(friendlyError(err, '加载失败'))
   } finally {
     loading.value = false
   }
@@ -124,7 +154,7 @@ async function onDelete(row: Exhibit) {
     ElMessage.success('已删除')
     await load()
   } catch (err) {
-    ElMessage.error(err instanceof Error ? err.message : '删除失败')
+    ElMessage.error(friendlyError(err, '删除失败'))
   }
 }
 
@@ -156,7 +186,7 @@ async function genTextQR() {
     const text = `请使用小程序"北部湾海洋生态守护站讲解"进行扫码\n展品编号：${qrTarget.value.exhibitId}`
     qrDataUrl.value = await QRCode.toDataURL(text, { width: 240, margin: 1 })
   } catch (err) {
-    qrError.value = err instanceof Error ? err.message : '生成二维码失败'
+    qrError.value = friendlyError(err, '生成二维码失败')
   } finally {
     qrLoading.value = false
   }
@@ -171,7 +201,7 @@ async function loadMpQR() {
   try {
     qrDataUrl.value = await fetchExhibitQRCode(qrTarget.value.exhibitId, 'release')
   } catch (err) {
-    qrError.value = err instanceof Error ? err.message : '生成小程序码失败'
+    qrError.value = friendlyError(err, '生成小程序码失败')
   } finally {
     qrLoading.value = false
   }
@@ -194,15 +224,14 @@ onMounted(load)
     <div class="toolbar">
       <el-button type="primary" @click="goNew">新增展品</el-button>
       <div class="toolbar-right">
-        <el-button link @click="load">刷新</el-button>
+        <el-button :icon="Refresh" @click="load">刷新</el-button>
       </div>
     </div>
 
     <div class="filter-bar">
       <el-input v-model="keyword" placeholder="搜索名称/编号" clearable style="width: 220px" />
-      <el-select v-model="sortBy" style="width: 140px">
-        <el-option label="按编号" value="exhibitId" />
-        <el-option label="按名称" value="name" />
+      <el-select v-model="categoryFilter" clearable placeholder="全部分类" style="width: 150px">
+        <el-option v-for="c in CATEGORIES" :key="c" :label="c" :value="c" />
       </el-select>
     </div>
 
@@ -212,7 +241,19 @@ onMounted(load)
       <el-button type="primary" plain @click="onBatchQr">批量导出二维码</el-button>
     </div>
 
-    <el-table :data="paged" v-loading="loading" border stripe empty-text="暂无展品" @selection-change="onSelectionChange">
+    <el-skeleton v-if="loading && !rows.length" :rows="6" animated class="list-skeleton" />
+    <el-table
+      v-else
+      :data="paged"
+      v-loading="loading"
+      border
+      stripe
+      @selection-change="onSelectionChange"
+      @sort-change="onSortChange"
+    >
+      <template #empty>
+        <el-empty :description="keyword || categoryFilter ? '没有匹配的展品' : '暂无展品'" />
+      </template>
       <el-table-column type="selection" width="48" />
       <el-table-column label="图片" width="90">
         <template #default="{ row }">
@@ -225,10 +266,10 @@ onMounted(load)
           <span v-else class="muted">无</span>
         </template>
       </el-table-column>
-      <el-table-column prop="exhibitId" label="编号" width="140" />
-      <el-table-column prop="name" label="名称" min-width="160" />
+      <el-table-column prop="exhibitId" label="编号" width="140" sortable="custom" />
+      <el-table-column prop="name" label="名称" min-width="160" sortable="custom" />
       <el-table-column prop="summary" label="简述" min-width="160" show-overflow-tooltip />
-      <el-table-column prop="category" label="分类" width="90" />
+      <el-table-column prop="category" label="分类" width="110" sortable="custom" />
       <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="goEdit(row)">编辑</el-button>
@@ -239,6 +280,7 @@ onMounted(load)
     </el-table>
 
     <el-pagination
+      v-if="!loading || rows.length"
       class="pager"
       layout="total, prev, pager, next, sizes"
       :total="filtered.length"
@@ -261,7 +303,6 @@ onMounted(load)
         <div class="qr-canvas" v-loading="qrLoading">
           <el-image v-if="qrDataUrl" :src="qrDataUrl" style="width: 240px; height: 240px" />
           <el-alert v-else-if="qrError" :title="qrError" type="error" :closable="false" show-icon />
-          <span v-else-if="!qrLoading" class="muted">生成中…</span>
         </div>
 
         <el-alert
@@ -314,6 +355,9 @@ onMounted(load)
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+}
+.list-skeleton {
+  padding: 16px 0;
 }
 .muted {
   color: var(--ocean-text-muted);

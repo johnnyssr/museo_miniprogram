@@ -1,0 +1,11 @@
+<!--components/section-block/section-block.wxml-->
+<view class="block">
+  <view class="block-head" bindtap="onToggle">
+    <text class="block-title">{{title}}</text>
+    <text class="arrow">{{expanded ? '收起' : (hint || '展开')}}</text>
+  </view>
+  <view wx:if="{{expanded}}" class="block-body">
+    <slot></slot>
+  </view>
+  <slot wx:else name="collapsed"></slot>
+</view>

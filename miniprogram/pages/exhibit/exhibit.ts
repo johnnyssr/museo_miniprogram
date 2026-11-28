@@ -1,216 +1,176 @@
-// exhibit.ts —— 展品详情页
 import { getExhibitById } from '../../services/exhibit'
 import { Exhibit } from '../../models/exhibit'
 import { markVisited } from '../../utils/visitHistory'
+import { scanToExhibit } from '../../utils/scan'
 
-const FONT_SIZES = [24, 28, 34] // rpx: 小/中/大
+const FONT_SIZES = [24, 28, 34]
 const FOLD_LEN = 200
-
-function fmtTime(sec: number): string {
-  const m = Math.floor(sec / 60)
-  const s = Math.floor(sec % 60)
-  return (m < 10 ? '0' + m : String(m)) + ':' + (s < 10 ? '0' + s : String(s))
-}
 
 Component({
   data: {
+    id: '',
     exhibit: null as Exhibit | null,
     notFound: false,
-    // text
+    loadFailed: false,
+    imageIndex: 0,
+    activeTab: 'text',
     textLong: false,
     textShort: '',
     textExpanded: false,
     fontSize: 28,
-    // audio
-    audioExpanded: false,
-    audioPlaying: false,
-    audioLoading: false,
-    audioDuration: 0,
-    audioProgress: 0,
-    audioDurationFmt: '00:00',
-    audioCurrentFmt: '00:00',
-    // video
-    videoExpanded: false,
-  },
-
-  lifetimes: {
-    detached() {
-      const self = this as any
-      if (self._audioCtx) {
-        self._audioCtx.destroy()
-        self._audioCtx = null
-      }
-    },
+    videoOpen: false,
+    videoFailed: false,
+    videoPending: false,
+    videoRequest: 0,
   },
 
   methods: {
-    async onLoad(query: Record<string, string>) {
-      const id = (query.id || decodeURIComponent(query.scene || '') || '').trim()
+    onLoad(query: Record<string, string>) {
+      const id = (query.id || decodeURIComponent(query.scene || '')).trim()
+      const saved = wx.getStorageSync('exhibit_font_size')
+      this.setData({ id, fontSize: FONT_SIZES.includes(saved) ? saved : 28 })
+      return this.loadExhibit()
+    },
 
-      // 恢复字号偏好
-      const saved = wx.getStorageSync('exhibit_font_size') as number | ''
-      if (saved && FONT_SIZES.includes(saved)) {
-        this.setData({ fontSize: saved })
-      }
-
+    async loadExhibit() {
+      this.setData({ loadFailed: false })
       wx.showLoading({ title: '加载中' })
       try {
-        const exhibit = await getExhibitById(id)
+        const exhibit = await getExhibitById(this.data.id)
         if (!exhibit) {
           this.setData({ notFound: true })
           return
         }
-        const textLong = exhibit.text.length > FOLD_LEN
+        const body = (exhibit.text || '').trim()
         this.setData({
-          exhibit,
-          textLong,
-          textShort: textLong ? exhibit.text.slice(0, FOLD_LEN) + '…' : exhibit.text,
+          exhibit: { ...exhibit, text: body },
+          activeTab: !body && !exhibit.images.length && exhibit.videoUrl ? 'video' : 'text',
+          textLong: body.length > FOLD_LEN,
+          textShort: body.length > FOLD_LEN ? body.slice(0, FOLD_LEN) + '…' : body,
         })
-        wx.setNavigationBarTitle({ title: exhibit.name })
-        markVisited(id)
+        markVisited(this.data.id)
         wx.showShareMenu({ withShareTicket: false, menus: ['shareAppMessage', 'shareTimeline'] })
-      } catch (e) {
-        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+      } catch {
+        this.setData({ loadFailed: true })
       } finally {
         wx.hideLoading()
       }
     },
 
-    onHide() {
-      const self = this as any
-      if (self._audioCtx && this.data.audioPlaying) {
-        self._audioCtx.pause()
-        this.setData({ audioPlaying: false })
-      }
+    onImageChange(e: WechatMiniprogram.SwiperChange) {
+      this.setData({ imageIndex: e.detail.current })
     },
 
-    // ── 文字介绍 ──────────────────────────────────────
+    onPreviewImage(e: WechatMiniprogram.TouchEvent) {
+      const urls = this.data.exhibit?.images || []
+      if (urls.length) wx.previewImage({ current: e.currentTarget.dataset.src || urls[this.data.imageIndex], urls })
+    },
+
     toggleText() {
       this.setData({ textExpanded: !this.data.textExpanded })
     },
 
-    adjustFont(e: WechatMiniprogram.TouchEvent) {
-      const dir = e.currentTarget.dataset.dir as 'up' | 'down'
-      const cur = this.data.fontSize
-      const idx = FONT_SIZES.indexOf(cur)
-      const next = dir === 'up'
-        ? FONT_SIZES[Math.min(idx + 1, FONT_SIZES.length - 1)]
-        : FONT_SIZES[Math.max(idx - 1, 0)]
-      if (next === cur) return
-      this.setData({ fontSize: next })
-      wx.setStorageSync('exhibit_font_size', next)
-    },
-
-    // ── 图片预览 ──────────────────────────────────────
-    onPreviewImage(e: WechatMiniprogram.TouchEvent) {
-      const current = e.currentTarget.dataset.src as string
-      const urls = this.data.exhibit?.images || []
-      if (urls.length) wx.previewImage({ current, urls })
-    },
-
-    // ── 语音 ──────────────────────────────────────────
-    toggleAudio() {
-      this.setData({ audioExpanded: !this.data.audioExpanded })
-    },
-
-    toggleAudioPlay() {
-      const exhibit = this.data.exhibit
-      if (!exhibit?.audioUrl) return
-
-      const self = this as any
-      if (!self._audioCtx) {
-        const ctx = wx.createInnerAudioContext()
-        ctx.src = exhibit.audioUrl
-        ctx.onCanplay(() => {
-          const dur = ctx.duration || 0
-          this.setData({ audioLoading: false, audioDuration: dur, audioDurationFmt: fmtTime(dur) })
-        })
-        ctx.onTimeUpdate(() => {
-          const t = ctx.currentTime || 0
-          const d = ctx.duration || this.data.audioDuration || 0
-          this.setData({
-            audioCurrentFmt: fmtTime(t),
-            audioProgress: d > 0 ? Math.round((t / d) * 100) : 0,
-          })
-        })
-        ctx.onEnded(() => {
-          this.setData({ audioPlaying: false, audioProgress: 0, audioCurrentFmt: '00:00' })
-        })
-        ctx.onError(() => {
-          this.setData({ audioPlaying: false, audioLoading: false })
-          wx.showToast({ title: '语音加载失败', icon: 'none' })
-        })
-        self._audioCtx = ctx
-      }
-
-      if (this.data.audioPlaying) {
-        self._audioCtx.pause()
-        this.setData({ audioPlaying: false })
-      } else {
-        this.setData({ audioLoading: true })
-        self._audioCtx.play()
-        this.setData({ audioPlaying: true })
-      }
-    },
-
-    onAudioSeek(e: WechatMiniprogram.SliderChange) {
-      const self = this as any
-      if (!self._audioCtx) return
-      const t = (e.detail.value / 100) * (this.data.audioDuration || 0)
-      self._audioCtx.seek(t)
-      this.setData({ audioCurrentFmt: fmtTime(t) })
-    },
-
-    audioStep(e: WechatMiniprogram.TouchEvent) {
-      const self = this as any
-      if (!self._audioCtx) return
-      const sec = e.currentTarget.dataset.sec as number
-      const t = Math.max(0, Math.min((self._audioCtx.currentTime || 0) + sec, self._audioCtx.duration || 0))
-      self._audioCtx.seek(t)
-    },
-
-    // ── 视频 ──────────────────────────────────────────
-    toggleVideo() {
-      if (this.data.videoExpanded) {
-        this.setData({ videoExpanded: false })
-        return
-      }
-      wx.getNetworkType({
-        success: (res) => {
-          if (res.networkType !== 'wifi') {
-            wx.showModal({
-              title: '流量提示',
-              content: '当前非 Wi-Fi 环境，播放视频将消耗移动流量，是否继续？',
-              success: (r) => { if (r.confirm) this.setData({ videoExpanded: true }) },
-            })
-          } else {
-            this.setData({ videoExpanded: true })
-          }
+    chooseFont() {
+      const sizes = ['小', '标准', '大']
+      wx.showActionSheet({
+        itemList: sizes.map((label, i) => label + (FONT_SIZES[i] === this.data.fontSize ? '（当前）' : '')),
+        success: ({ tapIndex }) => {
+          const fontSize = FONT_SIZES[tapIndex]
+          this.setData({ fontSize })
+          wx.setStorageSync('exhibit_font_size', fontSize)
         },
-        fail: () => this.setData({ videoExpanded: true }),
       })
     },
 
-    onVideoError() {
-      wx.showToast({ title: '视频加载失败，请检查网络', icon: 'none', duration: 2000 })
+    selectTab(e: WechatMiniprogram.TouchEvent) {
+      const activeTab = e.currentTarget.dataset.tab
+      if (activeTab === this.data.activeTab) return
+      this.cancelVideoRequest()
+      this.setData({ activeTab, videoOpen: false })
     },
 
-    // ── 分享 ──────────────────────────────────────────
+    cancelVideoRequest() {
+      if (this.data.videoPending) {
+        this.setData({ videoRequest: this.data.videoRequest + 1, videoPending: false })
+      }
+    },
+
+    async requestVideo() {
+      if (this.data.videoPending || this.data.videoOpen) return
+      const request = this.data.videoRequest + 1
+      this.setData({ videoRequest: request, videoPending: true })
+      try {
+        const network = await wx.getNetworkType().catch(() => undefined)
+        if (request !== this.data.videoRequest) return
+        if (network && network.networkType !== 'wifi') {
+          const { confirm } = await wx.showModal({
+            title: '使用移动网络播放？',
+            content: '当前未连接 Wi-Fi，观看视频可能消耗移动流量。',
+            confirmText: '继续播放',
+          })
+          if (!confirm || request !== this.data.videoRequest) return
+        }
+        this.pauseNarration()
+        this.setData({ videoOpen: true, videoFailed: false })
+      } catch {
+        if (request === this.data.videoRequest) {
+          wx.showToast({ title: '暂时无法播放，请重试', icon: 'none' })
+        }
+      } finally {
+        if (request === this.data.videoRequest) this.setData({ videoPending: false })
+      }
+    },
+
+    pauseNarration() {
+      this.selectComponent('#narration')?.pause()
+    },
+
+    onAudioRequest() {
+      this.cancelVideoRequest()
+      this.pauseVideo()
+    },
+
+    pauseVideo() {
+      if (this.data.videoOpen) wx.createVideoContext('exhibit-video', this).pause()
+    },
+
+    onVideoError() {
+      this.setData({ videoOpen: false, videoFailed: true })
+      wx.showToast({ title: '视频加载失败，请重试', icon: 'none' })
+    },
+
+    onHide() {
+      this.cancelVideoRequest()
+      this.pauseVideo()
+    },
+
+    onUnload() {
+      this.cancelVideoRequest()
+    },
+
+    goList() {
+      wx.reLaunch({ url: '/pages/list/list' })
+    },
+
+    onScan() {
+      scanToExhibit()
+    },
+
     onShareAppMessage() {
       const e = this.data.exhibit
       return {
-        title: e ? `${e.name}——北部湾海洋生态守护站` : '北部湾海洋生态守护站讲解',
+        title: e ? e.name + '——北部湾海洋生态守护站' : '北部湾海洋生态守护站讲解',
         imageUrl: e?.image || '',
-        path: e ? `/pages/exhibit/exhibit?id=${e.id}` : '/pages/index/index',
+        path: e ? '/pages/exhibit/exhibit?id=' + e.id : '/pages/index/index',
       }
     },
 
     onShareTimeline() {
       const e = this.data.exhibit
       return {
-        title: e ? `${e.name}——北部湾海洋生态守护站` : '北部湾海洋生态守护站讲解',
+        title: e ? e.name + '——北部湾海洋生态守护站' : '北部湾海洋生态守护站讲解',
         imageUrl: e?.image || '',
-        query: e ? `id=${e.id}` : '',
+        query: e ? 'id=' + e.id : '',
       }
     },
   },

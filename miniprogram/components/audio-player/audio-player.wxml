@@ -1,0 +1,19 @@
+<view class="dock">
+  <view class="player {{playing || loading ? '' : 'idle'}}">
+    <view class="main-row">
+      <view class="play-action" bindtap="togglePlay" aria-role="button" aria-label="{{playing || loading ? '暂停语音讲解' : '播放语音讲解'}}">
+        <view class="play-disc"><view class="{{playing || loading ? 'pause-mark' : 'play-mark'}}"></view></view>
+        <view class="track">
+          <text class="track-title">{{playing ? '正在讲解' : loading ? '正在加载…' : '语音讲解'}}</text>
+          <text class="track-info">{{duration ? currentFmt + ' / ' + durationFmt : '点按播放'}}</text>
+        </view>
+      </view>
+      <view class="expand" bindtap="toggle" aria-role="button" aria-label="{{expanded ? '收起播放控制' : '展开播放控制'}}">{{expanded ? '收起' : '进度'}}<view class="caret {{expanded ? 'down' : ''}}"></view></view>
+    </view>
+    <view wx:if="{{expanded}}" class="controls">
+      <button class="step" data-sec="-10" bindtap="step" disabled="{{!duration}}" aria-label="后退十秒">−10秒</button>
+      <slider class="slider" disabled="{{!duration}}" value="{{progress}}" bindchange="onSeek" block-size="14" activeColor="#33a6c6" backgroundColor="#3a6b80" aria-label="语音播放进度" />
+      <button class="step" data-sec="10" bindtap="step" disabled="{{!duration}}" aria-label="前进十秒">+10秒</button>
+    </view>
+  </view>
+</view>

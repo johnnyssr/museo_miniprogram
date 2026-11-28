@@ -1,101 +1,56 @@
-<!--exhibit.wxml-->
-<view wx:if="{{notFound}}" class="empty">
-  <text>未找到该展品</text>
+<view wx:if="{{notFound || loadFailed}}" class="empty-fill">
+  <empty-state wx:if="{{notFound}}" text="未找到该展品" ctaText="看全部展品" bindcta="goList" />
+  <empty-state wx:else text="展品加载失败" ctaText="重新加载" bindcta="loadExhibit" />
 </view>
 
-<scroll-view wx:elif="{{exhibit}}" scroll-y class="page">
+<view wx:elif="{{exhibit}}" class="detail">
+  <scroll-view scroll-y class="reading-pane">
+    <view class="sheet">
+      <view class="caption">
+        <view class="category"><view class="category-rule"></view>{{exhibit.category || '馆藏展品'}}</view>
+        <text class="visited">✓ 已打卡</text>
+      </view>
+      <view class="name">{{exhibit.name}}</view>
+      <text wx:if="{{exhibit.summary}}" class="summary">{{exhibit.summary}}</text>
 
-  <!-- 图集轮播 -->
-  <swiper
-    wx:if="{{exhibit.images.length}}"
-    class="cover-swiper"
-    indicator-dots="{{exhibit.images.length > 1}}"
-    indicator-color="rgba(255,255,255,0.5)"
-    indicator-active-color="#ffffff"
-    circular="{{exhibit.images.length > 1}}"
-  >
-    <swiper-item wx:for="{{exhibit.images}}" wx:key="*this">
-      <image class="cover" src="{{item}}" mode="aspectFill" data-src="{{item}}" bindtap="onPreviewImage" />
-    </swiper-item>
-  </swiper>
+      <view wx:if="{{exhibit.text || exhibit.images.length || exhibit.videoUrl}}" class="section-nav">
+        <view class="tabs">
+          <view wx:if="{{exhibit.text || exhibit.images.length}}" class="tab {{activeTab === 'text' ? 'selected' : ''}}" data-tab="text" bindtap="selectTab" aria-role="button">{{exhibit.text ? (exhibit.images.length ? '图文介绍' : '展品介绍') : '展品图集'}}</view>
+          <view wx:if="{{exhibit.videoUrl}}" class="tab {{activeTab === 'video' ? 'selected' : ''}}" data-tab="video" bindtap="selectTab" aria-role="button">展品视频</view>
+        </view>
+        <view wx:if="{{activeTab === 'text' && exhibit.text}}" class="type-control" bindtap="chooseFont" aria-role="button" aria-label="调整正文字号">字号</view>
+      </view>
+      <view wx:if="{{activeTab === 'text' && exhibit.images.length}}" class="gallery">
+        <swiper class="gallery-swiper" current="{{imageIndex}}" circular="{{exhibit.images.length > 1}}" bindchange="onImageChange">
+          <swiper-item wx:for="{{exhibit.images}}" wx:key="*this">
+            <image class="cover" src="{{item}}" mode="aspectFill" data-src="{{item}}" bindtap="onPreviewImage" aria-label="查看展品大图" />
+          </swiper-item>
+        </swiper>
+        <view class="gallery-count" bindtap="onPreviewImage" aria-role="button" aria-label="查看第 {{imageIndex + 1}} 张大图">
+          <view class="frame-icon"></view>
+          <text>{{imageIndex + 1}} / {{exhibit.images.length}}</text>
+        </view>
+      </view>
+      <view wx:if="{{activeTab === 'text' && exhibit.text}}" class="article">
+        <text class="body-text" selectable style="font-size: {{fontSize}}rpx">{{textExpanded || !textLong ? exhibit.text : textShort}}</text>
+        <view wx:if="{{textLong}}" class="text-toggle" bindtap="toggleText" aria-role="button">{{textExpanded ? '收起全文' : '展开全文'}}<view class="chevron {{textExpanded ? 'up' : ''}}"></view></view>
+      </view>
+      <view wx:if="{{activeTab === 'video' && exhibit.videoUrl}}" class="film">
+        <video wx:if="{{videoOpen}}" id="exhibit-video" class="film-player" src="{{exhibit.videoUrl}}" poster="{{exhibit.image}}" autoplay controls bindplay="pauseNarration" binderror="onVideoError" />
+        <view wx:else class="film-poster" bindtap="requestVideo" aria-role="button" aria-label="播放展品视频">
+          <image wx:if="{{exhibit.image}}" class="cover" src="{{exhibit.image}}" mode="aspectFill" />
+          <view class="film-scrim"><view class="film-play"><view class="triangle"></view></view><text>{{videoFailed ? '重新播放' : '播放视频'}}</text></view>
+        </view>
+      </view>
 
-  <!-- 标题 -->
-  <view class="header">
-    <text class="name">{{exhibit.name}}</text>
-    <text wx:if="{{exhibit.summary}}" class="summary">{{exhibit.summary}}</text>
-  </view>
-
-  <!-- 文字介绍 -->
-  <view class="section">
-    <view class="section-head">
-      <text class="section-title">文字介绍</text>
-      <view class="font-btns">
-        <text class="font-btn" data-dir="down" bindtap="adjustFont">A-</text>
-        <text class="font-btn" data-dir="up" bindtap="adjustFont">A+</text>
+      <view class="footer">
+        <view class="footer-nav">
+          <view class="nav-btn" bindtap="goList" aria-role="button">全部展品</view>
+          <view class="nav-btn" bindtap="onScan" aria-role="button">继续扫码</view>
+        </view>
+        <button class="share" open-type="share"><view class="share-icon"></view>分享展品</button>
       </view>
     </view>
-    <text class="text" style="font-size: {{fontSize}}rpx">{{textExpanded || !textLong ? exhibit.text : textShort}}</text>
-    <view wx:if="{{textLong}}" class="text-toggle" bindtap="toggleText">
-      {{textExpanded ? '收起' : '展开全文'}}
-    </view>
-  </view>
-
-  <!-- 语音介绍 -->
-  <view class="block">
-    <view class="block-head" bindtap="toggleAudio">
-      <text>语音介绍</text>
-      <text class="arrow">{{audioExpanded ? '收起' : '展开'}}</text>
-    </view>
-    <view wx:if="{{audioExpanded}}" class="block-body">
-      <view class="audio-time-row">
-        <text class="audio-time-txt">{{audioCurrentFmt}}</text>
-        <slider
-          class="audio-slider"
-          value="{{audioProgress}}"
-          bindchange="onAudioSeek"
-          block-size="16"
-          activeColor="#0e88ab"
-          backgroundColor="#c9e8f0"
-        />
-        <text class="audio-time-txt">{{audioDurationFmt}}</text>
-      </view>
-      <view class="audio-controls">
-        <text class="audio-step-btn" data-sec="{{-10}}" bindtap="audioStep">-10s</text>
-        <button class="play-btn" bindtap="toggleAudioPlay" loading="{{audioLoading}}">
-          {{audioPlaying ? '暂停' : '播放'}}
-        </button>
-        <text class="audio-step-btn" data-sec="{{10}}" bindtap="audioStep">+10s</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 视频介绍 -->
-  <view class="block">
-    <view class="block-head" bindtap="toggleVideo">
-      <text>视频介绍</text>
-      <text class="arrow">{{videoExpanded ? '收起' : '展开'}}</text>
-    </view>
-    <view wx:if="{{videoExpanded}}" class="block-body">
-      <video
-        class="video"
-        src="{{exhibit.videoUrl}}"
-        poster="{{exhibit.image}}"
-        binderror="onVideoError"
-        show-center-play-btn
-      />
-    </view>
-    <view wx:elif="{{exhibit.videoUrl}}" class="video-preview" bindtap="toggleVideo">
-      <image class="video-thumb" src="{{exhibit.image}}" mode="aspectFill" />
-      <view class="video-play-overlay">
-        <view class="video-play-icon">▶</view>
-        <text class="video-play-hint">点击播放视频</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 底部操作区 -->
-  <view class="bottom-bar">
-    <button open-type="share" class="share-btn">分享给朋友</button>
-  </view>
-
-</scroll-view>
+  </scroll-view>
+  <audio-player wx:if="{{exhibit.audioUrl}}" id="narration" src="{{exhibit.audioUrl}}" bindplayrequest="onAudioRequest" />
+</view>

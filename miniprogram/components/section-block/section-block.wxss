@@ -1,0 +1,26 @@
+/**components/section-block/section-block.wxss**/
+.block {
+  margin: var(--space-md);
+  background: var(--ocean-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+.block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-lg);
+}
+.block-title {
+  font-size: var(--fs-subtitle);
+  font-weight: bold;
+  color: var(--ocean-text-strong);
+}
+.arrow {
+  font-size: var(--fs-small);
+  color: var(--ocean-primary);
+}
+.block-body {
+  padding: 0 var(--space-lg) var(--space-lg);
+}
